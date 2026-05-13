@@ -1,0 +1,46 @@
+name: frigo
+description: "Frigo — food management app for HackTM."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.6.1
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Barcode scanner
+  mobile_scanner: ^6.0.0
+
+  # HTTP client (Groq API)
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo_frigo.png
+    - assets/logo+name.png

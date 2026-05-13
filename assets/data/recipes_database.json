@@ -1,0 +1,545 @@
+{
+  "proteins": [
+    {
+      "id": "protein_001",
+      "name": "Piept de pui la cuptor",
+      "type": "protein",
+      "ingredients": ["piept de pui", "usturoi", "oțet balsamic"],
+      "quantity_per_serving": {"piept de pui": "200g", "usturoi": "3 căței", "oțet balsamic": "1 linguriță"},
+      "prep_time_minutes": 45,
+      "compatible_with": ["cartofi la cuptor", "orez pilaf", "salată verde", "cartofi piure"]
+    },
+    {
+      "id": "protein_002",
+      "name": "Mici la grătar",
+      "type": "protein",
+      "ingredients": ["carne tocată mix porc vită", "bicarbonat de sodiu", "boia de ardei"],
+      "quantity_per_serving": {"carne tocată mix porc vită": "400g", "bicarbonat de sodiu": "1 linguriță", "boia de ardei": "1 linguriță"},
+      "prep_time_minutes": 20,
+      "compatible_with": ["mămăligă cu brânză", "cartofi la cuptor", "salată de vinete", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "protein_003",
+      "name": "Sarmale în frunză de varză",
+      "type": "protein",
+      "ingredients": ["frunze de varză", "carne tocată mix", "orez", "ceapă"],
+      "quantity_per_serving": {"frunze de varză": "16 foi", "carne tocată mix": "500g", "orez": "100g", "ceapă": "2 bucăți"},
+      "prep_time_minutes": 120,
+      "compatible_with": ["mămăligă", "smântână", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "protein_004",
+      "name": "Fasole bătută cu cârnați",
+      "type": "protein",
+      "ingredients": ["fasole uscată", "cârnați afumați", "ceapă", "boia de ardei"],
+      "quantity_per_serving": {"fasole uscată": "400g", "cârnați afumați": "200g", "ceapă": "2 bucăți", "boia de ardei": "1 linguriță"},
+      "prep_time_minutes": 60,
+      "compatible_with": ["mămăligă", "pâine cu usturoi", "salată de varză"]
+    },
+    {
+      "id": "protein_005",
+      "name": "Plăcintă cu spanac și brânză",
+      "type": "protein",
+      "ingredients": ["foi de plăcintă", "spanac", "brânză telemea"],
+      "quantity_per_serving": {"foi de plăcintă": "12 foi", "spanac": "500g", "brânză telemea": "200g"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["salată verde", "salată de roșii cu castraveți", "smântână"]
+    },
+    {
+      "id": "protein_006",
+      "name": "Pui cu smântână și ardei",
+      "type": "protein",
+      "ingredients": ["piept de pui", "smântână", "ardei", "ceapă"],
+      "quantity_per_serving": {"piept de pui": "400g", "smântână": "200ml", "ardei": "3 bucăți", "ceapă": "1 bucată"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["orez pilaf", "orez fiert", "cartofi la cuptor"]
+    },
+    {
+      "id": "protein_007",
+      "name": "Musacă",
+      "type": "protein",
+      "ingredients": ["vinete", "roșii", "carne tocată de vită", "usturoi"],
+      "quantity_per_serving": {"vinete": "4 bucăți", "roșii": "3 bucăți", "carne tocată de vită": "400g", "usturoi": "2 căței"},
+      "prep_time_minutes": 60,
+      "compatible_with": ["orez fiert", "salată grecească", "salată verde"]
+    },
+    {
+      "id": "protein_008",
+      "name": "Tocăniță de pui",
+      "type": "protein",
+      "ingredients": ["piept de pui", "ceapă", "roșii", "ardei"],
+      "quantity_per_serving": {"piept de pui": "500g", "ceapă": "2 bucăți", "roșii": "3 bucăți", "ardei": "2 bucăți"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["mămăligă", "orez fiert", "cartofi la cuptor"]
+    },
+    {
+      "id": "protein_009",
+      "name": "Chiftele cu sos de roșii",
+      "type": "protein",
+      "ingredients": ["carne tocată mix", "ou", "ceapă", "roșii"],
+      "quantity_per_serving": {"carne tocată mix": "500g", "ou": "1 bucată", "ceapă": "1 bucată", "roșii": "400g"},
+      "prep_time_minutes": 35,
+      "compatible_with": ["cartofi piure", "orez fiert", "mămăligă"]
+    },
+    {
+      "id": "protein_010",
+      "name": "Pui la tigaie cu muștar",
+      "type": "protein",
+      "ingredients": ["piept de pui", "usturoi", "muștar"],
+      "quantity_per_serving": {"piept de pui": "400g", "usturoi": "2 căței", "muștar": "2 linguri"},
+      "prep_time_minutes": 25,
+      "compatible_with": ["orez pilaf", "cartofi la cuptor", "salată de vinete"]
+    },
+    {
+      "id": "protein_011",
+      "name": "Fasole cu cârnați afumați",
+      "type": "protein",
+      "ingredients": ["fasole", "cârnați afumați", "ceapă"],
+      "quantity_per_serving": {"fasole": "500g", "cârnați afumați": "300g", "ceapă": "2 bucăți"},
+      "prep_time_minutes": 50,
+      "compatible_with": ["mămăligă", "mămăligă cu brânză", "smântână"]
+    },
+    {
+      "id": "protein_012",
+      "name": "Legume la grătar",
+      "type": "protein",
+      "ingredients": ["vinete", "ardei", "ceapă", "roșii"],
+      "quantity_per_serving": {"vinete": "3 bucăți", "ardei": "4 bucăți", "ceapă": "2 bucăți", "roșii": "5 bucăți"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["mămăligă", "mămăligă cu brânză", "salată verde"]
+    },
+    {
+      "id": "protein_013",
+      "name": "Friptură de vită la tavă",
+      "type": "protein",
+      "ingredients": ["carne de vită", "usturoi", "rozmarin"],
+      "quantity_per_serving": {"carne de vită": "500g", "usturoi": "4 căței", "rozmarin": "2 crenguțe"},
+      "prep_time_minutes": 90,
+      "compatible_with": ["cartofi la cuptor", "cartofi piure", "salată verde"]
+    },
+    {
+      "id": "protein_014",
+      "name": "Tocăniță moldovenească",
+      "type": "protein",
+      "ingredients": ["carne de porc", "ceapă", "roșii", "ardei"],
+      "quantity_per_serving": {"carne de porc": "500g", "ceapă": "2 bucăți", "roșii": "3 bucăți", "ardei": "2 bucăți"},
+      "prep_time_minutes": 60,
+      "compatible_with": ["mămăligă", "orez fiert", "cartofi la cuptor"]
+    },
+    {
+      "id": "protein_015",
+      "name": "Pește la cuptor cu lămâie",
+      "type": "protein",
+      "ingredients": ["file de pește", "lămâie", "usturoi"],
+      "quantity_per_serving": {"file de pește": "400g", "lămâie": "1 bucată", "usturoi": "3 căței"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["orez fiert", "cartofi la cuptor", "salată verde"]
+    }
+  ],
+  "soups": [
+    {
+      "id": "soup_001",
+      "name": "Ciorbă de burtă",
+      "type": "soup",
+      "ingredients": ["burtă de vită", "ceapă", "boia de ardei", "smântână"],
+      "quantity_per_serving": {"burtă de vită": "600g", "ceapă": "2 bucăți", "boia de ardei": "1 linguriță", "smântână": "200ml"},
+      "prep_time_minutes": 90,
+      "compatible_with": ["mămăligă", "mămăligă cu brânză", "pâine cu usturoi"]
+    },
+    {
+      "id": "soup_002",
+      "name": "Ciorbă de vită",
+      "type": "soup",
+      "ingredients": ["piept de vită", "morcov", "pătrunjel", "țelină"],
+      "quantity_per_serving": {"piept de vită": "600g", "morcov": "2 bucăți", "pătrunjel": "1 legătură", "țelină": "1 bucată"},
+      "prep_time_minutes": 60,
+      "compatible_with": ["orez fiert", "vermicele", "cartofi piure"]
+    },
+    {
+      "id": "soup_003",
+      "name": "Ciorbă de legume",
+      "type": "soup",
+      "ingredients": ["țelină", "morcov", "pătrunjel", "varză", "ardei"],
+      "quantity_per_serving": {"țelină": "2 bucăți", "morcov": "3 bucăți", "pătrunjel": "1 legătură", "varză": "500g", "ardei": "3 bucăți"},
+      "prep_time_minutes": 45,
+      "compatible_with": ["mămăligă", "orez fiert", "cartofi la cuptor"]
+    },
+    {
+      "id": "soup_004",
+      "name": "Ciorbă de fasole",
+      "type": "soup",
+      "ingredients": ["fasole", "țelină", "pătrunjel", "morcov"],
+      "quantity_per_serving": {"fasole": "400g", "țelină": "1 bucată", "pătrunjel": "1 legătură", "morcov": "2 bucăți"},
+      "prep_time_minutes": 50,
+      "compatible_with": ["mămăligă", "mămăligă cu brânză", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "soup_005",
+      "name": "Supă de pui cu găluște",
+      "type": "soup",
+      "ingredients": ["piept de pui", "ou", "făină", "morcov"],
+      "quantity_per_serving": {"piept de pui": "800g", "ou": "2 bucăți", "făină": "100g", "morcov": "2 bucăți"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["orez fiert", "vermicele", "pâine proaspătă"]
+    },
+    {
+      "id": "soup_006",
+      "name": "Ciorbă de perișoare",
+      "type": "soup",
+      "ingredients": ["carne tocată mix", "ceapă", "orez", "morcov"],
+      "quantity_per_serving": {"carne tocată mix": "600g", "ceapă": "2 bucăți", "orez": "100g", "morcov": "2 bucăți"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["orez fiert", "vermicele", "pâine proaspătă"]
+    },
+    {
+      "id": "soup_007",
+      "name": "Ciorbă de sfeclă roșie",
+      "type": "soup",
+      "ingredients": ["sfeclă roșie", "țelină", "carne de vită", "smântână"],
+      "quantity_per_serving": {"sfeclă roșie": "300g", "țelină": "1 bucată", "carne de vită": "400g", "smântână": "200ml"},
+      "prep_time_minutes": 80,
+      "compatible_with": ["mămăligă", "orez fiert", "pâine proaspătă"]
+    },
+    {
+      "id": "soup_008",
+      "name": "Ciorbă de fasole verde",
+      "type": "soup",
+      "ingredients": ["fasole verde", "ceapă", "boia de ardei", "smântână"],
+      "quantity_per_serving": {"fasole verde": "500g", "ceapă": "1 bucată", "boia de ardei": "1 linguriță", "smântână": "200ml"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["orez fiert", "mămăligă", "cartofi la cuptor"]
+    },
+    {
+      "id": "soup_009",
+      "name": "Ciorbă de linte",
+      "type": "soup",
+      "ingredients": ["linte", "morcov", "ceapă", "roșii"],
+      "quantity_per_serving": {"linte": "400g", "morcov": "2 bucăți", "ceapă": "1 bucată", "roșii": "2 bucăți"},
+      "prep_time_minutes": 45,
+      "compatible_with": ["mămăligă", "orez fiert", "salată verde"]
+    },
+    {
+      "id": "soup_010",
+      "name": "Ciorbă de varză albă",
+      "type": "soup",
+      "ingredients": ["varză albă", "ceapă", "boia de ardei", "ciuperci"],
+      "quantity_per_serving": {"varză albă": "800g", "ceapă": "2 bucăți", "boia de ardei": "1 linguriță", "ciuperci": "200g"},
+      "prep_time_minutes": 50,
+      "compatible_with": ["mămăligă", "mămăligă cu brânză", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "soup_011",
+      "name": "Ciorbă de zarzavat",
+      "type": "soup",
+      "ingredients": ["țelină", "morcov", "varză", "ardei", "roșii"],
+      "quantity_per_serving": {"țelină": "2 bucăți", "morcov": "3 bucăți", "varză": "500g", "ardei": "2 bucăți", "roșii": "3 bucăți"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["orez fiert", "mămăligă", "vermicele"]
+    },
+    {
+      "id": "soup_012",
+      "name": "Ciorbă de sparanghel",
+      "type": "soup",
+      "ingredients": ["sparanghel", "ceapă", "smântână", "morcov"],
+      "quantity_per_serving": {"sparanghel": "500g", "ceapă": "1 bucată", "smântână": "200ml", "morcov": "1 bucată"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["cartofi la cuptor", "orez fiert", "salată verde"]
+    },
+    {
+      "id": "soup_013",
+      "name": "Ciorbă de dovlecei",
+      "type": "soup",
+      "ingredients": ["dovlecei", "ceapă", "smântână", "usturoi"],
+      "quantity_per_serving": {"dovlecei": "600g", "ceapă": "2 bucăți", "smântână": "200ml", "usturoi": "3 căței"},
+      "prep_time_minutes": 35,
+      "compatible_with": ["orez fiert", "mămăligă", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "soup_014",
+      "name": "Borș de pui",
+      "type": "soup",
+      "ingredients": ["piept de pui", "morcov", "țelină", "borș"],
+      "quantity_per_serving": {"piept de pui": "600g", "morcov": "2 bucăți", "țelină": "1 bucată", "borș": "500ml"},
+      "prep_time_minutes": 45,
+      "compatible_with": ["smântână", "mămăligă", "pâine proaspătă"]
+    },
+    {
+      "id": "soup_015",
+      "name": "Supă cremă de roșii",
+      "type": "soup",
+      "ingredients": ["roșii", "ceapă", "usturoi", "smântână"],
+      "quantity_per_serving": {"roșii": "800g", "ceapă": "1 bucată", "usturoi": "3 căței", "smântână": "100ml"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["pâine prăjită", "salată verde", "brânză telemea"]
+    }
+  ],
+  "sides": [
+    {
+      "id": "side_001",
+      "name": "Cartofi la cuptor",
+      "type": "side",
+      "ingredients": ["cartofi", "usturoi"],
+      "quantity_per_serving": {"cartofi": "500g", "usturoi": "2 căței"},
+      "prep_time_minutes": 50,
+      "compatible_with": ["Piept de pui la cuptor", "Mici la grătar", "Friptură de vită la tavă"]
+    },
+    {
+      "id": "side_002",
+      "name": "Orez pilaf",
+      "type": "side",
+      "ingredients": ["orez", "ceapă", "usturoi"],
+      "quantity_per_serving": {"orez": "200g", "ceapă": "1 bucată", "usturoi": "2 căței"},
+      "prep_time_minutes": 25,
+      "compatible_with": ["Piept de pui la cuptor", "Pui la tigaie cu muștar", "Musacă"]
+    },
+    {
+      "id": "side_003",
+      "name": "Mămăligă cu brânză",
+      "type": "side",
+      "ingredients": ["mălai", "brânză telemea", "smântână"],
+      "quantity_per_serving": {"mălai": "200g", "brânză telemea": "100g", "smântână": "100g"},
+      "prep_time_minutes": 20,
+      "compatible_with": ["Mici la grătar", "Sarmale în frunză de varză", "Ciorbă de burtă"]
+    },
+    {
+      "id": "side_004",
+      "name": "Cartofi piure",
+      "type": "side",
+      "ingredients": ["cartofi", "lapte", "unt"],
+      "quantity_per_serving": {"cartofi": "800g", "lapte": "100ml", "unt": "50g"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["Piept de pui la cuptor", "Chiftele cu sos de roșii", "Friptură de vită la tavă"]
+    },
+    {
+      "id": "side_005",
+      "name": "Orez fiert",
+      "type": "side",
+      "ingredients": ["orez"],
+      "quantity_per_serving": {"orez": "200g"},
+      "prep_time_minutes": 15,
+      "compatible_with": ["Ciorbă de perișoare", "Tocăniță de pui", "Musacă"]
+    },
+    {
+      "id": "side_006",
+      "name": "Mămăligă",
+      "type": "side",
+      "ingredients": ["mălai"],
+      "quantity_per_serving": {"mălai": "250g"},
+      "prep_time_minutes": 20,
+      "compatible_with": ["Sarmale în frunză de varză", "Tocăniță moldovenească", "Ciorbă de fasole"]
+    },
+    {
+      "id": "side_007",
+      "name": "Paste cu unt",
+      "type": "side",
+      "ingredients": ["paste", "unt", "usturoi"],
+      "quantity_per_serving": {"paste": "200g", "unt": "30g", "usturoi": "2 căței"},
+      "prep_time_minutes": 15,
+      "compatible_with": ["Pui la tigaie cu muștar", "Tocăniță de pui", "Chiftele cu sos de roșii"]
+    }
+  ],
+  "salads": [
+    {
+      "id": "salad_001",
+      "name": "Salată grecească",
+      "type": "salad",
+      "ingredients": ["roșii", "castraveți", "ceapă", "brânză feta"],
+      "quantity_per_serving": {"roșii": "3 bucăți", "castraveți": "1 bucată", "ceapă": "1 bucată", "brânză feta": "100g"},
+      "prep_time_minutes": 10,
+      "compatible_with": ["Piept de pui la cuptor", "Plăcintă cu spanac și brânză", "Musacă"]
+    },
+    {
+      "id": "salad_002",
+      "name": "Salată de vinete",
+      "type": "salad",
+      "ingredients": ["vinete", "usturoi", "ceapă"],
+      "quantity_per_serving": {"vinete": "400g", "usturoi": "2 căței", "ceapă": "1 bucată"},
+      "prep_time_minutes": 30,
+      "compatible_with": ["Mici la grătar", "Sarmale în frunză de varză", "Fasole bătută cu cârnați"]
+    },
+    {
+      "id": "salad_003",
+      "name": "Salată de hrean",
+      "type": "salad",
+      "ingredients": ["hrean", "zeamă de lămâie"],
+      "quantity_per_serving": {"hrean": "200g", "zeamă de lămâie": "2 linguri"},
+      "prep_time_minutes": 15,
+      "compatible_with": ["Mici la grătar", "Sarmale în frunză de varză", "Fasole bătută cu cârnați"]
+    },
+    {
+      "id": "salad_004",
+      "name": "Salată de roșii cu castraveți",
+      "type": "salad",
+      "ingredients": ["roșii", "castraveți", "ceapă"],
+      "quantity_per_serving": {"roșii": "3 bucăți", "castraveți": "2 bucăți", "ceapă": "1 bucată"},
+      "prep_time_minutes": 5,
+      "compatible_with": ["Sarmale în frunză de varză", "Ciorbă de perișoare", "Plăcintă cu spanac și brânză"]
+    },
+    {
+      "id": "salad_005",
+      "name": "Salată de varză",
+      "type": "salad",
+      "ingredients": ["varză albă", "morcov", "ceapă"],
+      "quantity_per_serving": {"varză albă": "500g", "morcov": "2 bucăți", "ceapă": "1 bucată"},
+      "prep_time_minutes": 10,
+      "compatible_with": ["Mici la grătar", "Fasole cu cârnați afumați", "Tocăniță moldovenească"]
+    },
+    {
+      "id": "salad_006",
+      "name": "Salată de sfeclă roșie",
+      "type": "salad",
+      "ingredients": ["sfeclă roșie", "hrean", "lămâie"],
+      "quantity_per_serving": {"sfeclă roșie": "400g", "hrean": "50g", "lămâie": "1 bucată"},
+      "prep_time_minutes": 15,
+      "compatible_with": ["Friptură de vită la tavă", "Tocăniță moldovenească", "Sarmale în frunză de varză"]
+    },
+    {
+      "id": "salad_007",
+      "name": "Salată de ardei copți",
+      "type": "salad",
+      "ingredients": ["ardei roșu", "usturoi", "roșii"],
+      "quantity_per_serving": {"ardei roșu": "4 bucăți", "usturoi": "3 căței", "roșii": "2 bucăți"},
+      "prep_time_minutes": 40,
+      "compatible_with": ["Mici la grătar", "Friptură de vită la tavă", "Pui la tigaie cu muștar"]
+    }
+  ],
+  "breakfast": [
+    {
+      "id": "breakfast_001",
+      "name": "Omletă cu brânză",
+      "type": "breakfast",
+      "ingredients": ["ou", "brânză telemea", "smântână"],
+      "quantity_per_serving": {"ou": "3 bucăți", "brânză telemea": "50g", "smântână": "1 lingură"},
+      "prep_time_minutes": 10,
+      "compatible_with": ["salată de roșii cu castraveți", "salată verde", "pâine proaspătă"]
+    },
+    {
+      "id": "breakfast_002",
+      "name": "Ouă jumări cu cârnați",
+      "type": "breakfast",
+      "ingredients": ["ou", "cârnați", "ceapă"],
+      "quantity_per_serving": {"ou": "3 bucăți", "cârnați": "100g", "ceapă": "1 bucată"},
+      "prep_time_minutes": 15,
+      "compatible_with": ["pâine proaspătă", "roșii", "salată verde"]
+    },
+    {
+      "id": "breakfast_003",
+      "name": "Brânză cu roșii și pâine",
+      "type": "breakfast",
+      "ingredients": ["brânză telemea", "roșii", "pâine"],
+      "quantity_per_serving": {"brânză telemea": "150g", "roșii": "2 bucăți", "pâine": "2 felii"},
+      "prep_time_minutes": 5,
+      "compatible_with": ["cafea", "ceai", "castraveți"]
+    },
+    {
+      "id": "breakfast_004",
+      "name": "Iaurt cu granola și fructe",
+      "type": "breakfast",
+      "ingredients": ["iaurt", "granola", "fructe de sezon"],
+      "quantity_per_serving": {"iaurt": "200g", "granola": "50g", "fructe de sezon": "100g"},
+      "prep_time_minutes": 5,
+      "compatible_with": ["miere", "nuci", "cafea"]
+    },
+    {
+      "id": "breakfast_005",
+      "name": "Pâine prăjită cu unt și gem",
+      "type": "breakfast",
+      "ingredients": ["pâine", "unt", "gem"],
+      "quantity_per_serving": {"pâine": "3 felii", "unt": "30g", "gem": "2 linguri"},
+      "prep_time_minutes": 5,
+      "compatible_with": ["cafea", "ceai", "lapte"]
+    },
+    {
+      "id": "breakfast_006",
+      "name": "Terci de ovăz cu fructe",
+      "type": "breakfast",
+      "ingredients": ["fulgi de ovăz", "lapte", "banane"],
+      "quantity_per_serving": {"fulgi de ovăz": "100g", "lapte": "300ml", "banane": "1 bucată"},
+      "prep_time_minutes": 10,
+      "compatible_with": ["miere", "nuci", "cafea"]
+    },
+    {
+      "id": "breakfast_007",
+      "name": "Clătite cu gem",
+      "type": "breakfast",
+      "ingredients": ["ou", "făină", "lapte", "gem"],
+      "quantity_per_serving": {"ou": "2 bucăți", "făină": "150g", "lapte": "300ml", "gem": "3 linguri"},
+      "prep_time_minutes": 20,
+      "compatible_with": ["smântână", "fructe proaspete", "miere"]
+    },
+    {
+      "id": "breakfast_008",
+      "name": "Ouă ochiuri cu roșii",
+      "type": "breakfast",
+      "ingredients": ["ou", "roșii", "ceapă"],
+      "quantity_per_serving": {"ou": "2 bucăți", "roșii": "2 bucăți", "ceapă": "1 bucată"},
+      "prep_time_minutes": 10,
+      "compatible_with": ["pâine proaspătă", "brânză telemea", "cafea"]
+    }
+  ],
+  "snacks": [
+    {
+      "id": "snack_001",
+      "name": "Plăcintă cu brânză și spanac",
+      "type": "snack",
+      "ingredients": ["brânză telemea", "spanac", "ou", "făină"],
+      "quantity_per_serving": {"brânză telemea": "200g", "spanac": "150g", "ou": "1 bucată", "făină": "200g"},
+      "prep_time_minutes": 25,
+      "compatible_with": ["salată verde", "smântână", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "snack_002",
+      "name": "Plăcintă cu brânză de vaci",
+      "type": "snack",
+      "ingredients": ["brânză de vaci", "smântână", "ou", "făină"],
+      "quantity_per_serving": {"brânză de vaci": "300g", "smântână": "100ml", "ou": "1 bucată", "făină": "200g"},
+      "prep_time_minutes": 20,
+      "compatible_with": ["salată verde", "smântână", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "snack_003",
+      "name": "Plăcintă cu brânză și ceapă",
+      "type": "snack",
+      "ingredients": ["brânză telemea", "ceapă", "ou", "făină"],
+      "quantity_per_serving": {"brânză telemea": "200g", "ceapă": "2 bucăți", "ou": "1 bucată", "făină": "200g"},
+      "prep_time_minutes": 20,
+      "compatible_with": ["salată verde", "smântână", "salată de roșii cu castraveți"]
+    },
+    {
+      "id": "snack_004",
+      "name": "Telemea cu roșii și pâine",
+      "type": "snack",
+      "ingredients": ["brânză telemea", "roșii", "pâine"],
+      "quantity_per_serving": {"brânză telemea": "100g", "roșii": "2 bucăți", "pâine": "2 felii"},
+      "prep_time_minutes": 5,
+      "compatible_with": ["castraveți", "ceapă verde", "ceai"]
+    },
+    {
+      "id": "snack_005",
+      "name": "Fructe cu iaurt",
+      "type": "snack",
+      "ingredients": ["fructe de sezon", "iaurt"],
+      "quantity_per_serving": {"fructe de sezon": "200g", "iaurt": "150g"},
+      "prep_time_minutes": 5,
+      "compatible_with": ["miere", "granola", "nuci"]
+    },
+    {
+      "id": "snack_006",
+      "name": "Hummus cu pâine pita",
+      "type": "snack",
+      "ingredients": ["năut", "tahini", "usturoi", "lămâie", "pâine pita"],
+      "quantity_per_serving": {"năut": "400g", "tahini": "80g", "usturoi": "3 căței", "lămâie": "1 bucată", "pâine pita": "2 bucăți"},
+      "prep_time_minutes": 15,
+      "compatible_with": ["salată de roșii cu castraveți", "salată grecească", "legume crude"]
+    },
+    {
+      "id": "snack_007",
+      "name": "Nuci și fructe uscate",
+      "type": "snack",
+      "ingredients": ["nuci", "stafide", "caise uscate"],
+      "quantity_per_serving": {"nuci": "50g", "stafide": "30g", "caise uscate": "30g"},
+      "prep_time_minutes": 2,
+      "compatible_with": ["ceai", "cafea", "iaurt"]
+    }
+  ]
+}

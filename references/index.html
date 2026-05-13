@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frigo — Reduce Food Waste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* === RESET & BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green:        #2D9E4F;
+  --green-dark:   #1E7A3C;
+  --green-light:  #4CC971;
+  --green-pale:   #E6F5EC;
+  --orange:       #F4A932;
+  --orange-dark:  #E8920F;
+  --orange-pale:  #FEF4DC;
+  --red:          #E8454A;
+  --red-pale:     #FDEAEA;
+  --yellow:       #F5C842;
+  --yellow-pale:  #FEFBE6;
+  --bg:           #F3F8F4;
+  --card:         #FFFFFF;
+  --text:         #182818;
+  --text-2:       #5A7B5A;
+  --text-3:       #9DB89D;
+  --border:       #DFF0E3;
+  --shadow:       0 2px 10px rgba(45,158,79,0.10);
+  --shadow-lg:    0 8px 28px rgba(45,158,79,0.18);
+  --r:            16px;
+  --r-sm:         10px;
+  --font:         'Nunito', sans-serif;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  font-family: var(--font);
+  background: #0D2014;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 15%, rgba(45,158,79,0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 82% 85%, rgba(244,169,50,0.22) 0%, transparent 70%),
+    #0D2014;
+}
+
+/* === PHONE OUTER === */
+.phone-outer {
+  position: relative;
+  width: 411px;
+  height: 878px;
+  filter: drop-shadow(0 40px 80px rgba(0,0,0,0.65));
+}
+
+/* Physical device frame */
+.phone-frame {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, #2A2A2A 0%, #1A1A1A 100%);
+  border-radius: 54px;
+  padding: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.07),
+    inset 1px 1px 4px rgba(255,255,255,0.04),
+    0 0 0 2px #0A0A0A;
+}
+
+/* Volume / power buttons */
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  left: -4px; top: 118px;
+  width: 4px; height: 32px;
+  background: #222;
+  border-radius: 3px 0 0 3px;
+  box-shadow: 0 48px 0 #222, 0 92px 0 #222;
+}
+.phone-frame::after {
+  content: '';
+  position: absolute;
+  right: -4px; top: 152px;
+  width: 4px; height: 68px;
+  background: #222;
+  border-radius: 0 3px 3px 0;
+}
+
+/* Screen inside frame */
+.phone-screen {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  border-radius: 42px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* === NOTCH === */
+.notch {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 136px; height: 34px;
+  background: #1A1A1A;
+  border-radius: 0 0 22px 22px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.notch-cam {
+  width: 11px; height: 11px;
+  background: #2C2C2C;
+  border-radius: 50%;
+  border: 2px solid #303030;
+}
+.notch-spk {
+  width: 48px; height: 5px;
+  background: #2C2C2C;
+  border-radius: 4px;
+}
+
+/* === STATUS BAR === */
+.status-bar {
+  flex-shrink: 0;
+  height: 50px;
+  padding: 14px 22px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  z-index: 10;
+}
+.status-time {
+  font-size: 15px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.status-icons {
+  display: flex; gap: 5px; align-items: center;
+  font-size: 12px; color: var(--text);
+}
+
+/* === SCREENS CONTAINER === */
+.screens-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.screen {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  opacity: 0;
+  transform: translateY(8px) scale(0.99);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  pointer-events: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+.screen.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+/* Chat screen uses its own flex layout */
+.screen-chat {
+  overflow-y: hidden !important;
+  display: flex;
+  flex-direction: column;
+}
+.screen-chat.active { display: flex; }
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.chat-scroll::-webkit-scrollbar { display: none; }
+
+/* === SHARED SCREEN PARTS === */
+.screen-header {
+  padding: 18px 20px 10px;
+  position: sticky; top: 0;
+  background: var(--bg);
+  z-index: 5;
+}
+.screen-title {
+  font-size: 24px; font-weight: 900;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+.screen-sub {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.screen-body {
+  padding: 6px 20px 24px;
+}
+.section-label {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+
+/* === PRODUCT CARDS === */
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 20px;
+}
+.product-card {
+  background: white;
+  border-radius: var(--r);
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.product-card:active { transform: scale(0.975); }
+.product-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 2px 0 0 2px;
+}
+.product-card.red::before   { background: var(--red); }
+.product-card.yellow::before{ background: var(--yellow); }
+.product-card.green::before { background: var(--green); }
+
+.p-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.p-info { flex: 1; }
+.p-name {
+  font-size: 14px; font-weight: 800;
+  color: var(--text);
+}
+.p-qty {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+.exp-badge {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-size: 11px; font-weight: 800;
+}
+.exp-badge.red    { background: var(--red-pale);    color: var(--red);      }
+.exp-badge.yellow { background: var(--yellow-pale); color: #B87C00;         }
+.exp-badge.green  { background: var(--green-pale);  color: var(--green-dark); }
+
+/* Pulsing animation on red badges */
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,69,74,0.35); }
+  50%       { box-shadow: 0 0 0 5px rgba(232,69,74,0); }
+}
+.exp-badge.red { animation: pulse-red 2s infinite; }
+
+/* === PANTRY STATS === */
+.pantry-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: white;
+  border-radius: var(--r-sm);
+  padding: 12px 8px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.stat-num  { display: block; font-size: 24px; font-weight: 900; }
+.stat-lbl  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-2); }
+.stat-card.red    .stat-num { color: var(--red); }
+.stat-card.yellow .stat-num { color: var(--orange); }
+.stat-card.green  .stat-num { color: var(--green); }
+
+/* === FAB === */
+.fab {
+  position: absolute;
+  bottom: 18px; right: 18px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  font-size: 30px; line-height: 1;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(45,158,79,0.50);
+  z-index: 6;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: 0 4px 18px rgba(45,158,79,0.50); }
+  50%       { box-shadow: 0 4px 28px rgba(45,158,79,0.75); }
+}
+.fab { animation: fab-pulse 2.5s ease-in-out infinite; }
+.fab:active { transform: scale(0.88); animation: none; }
+
+/* === ALERTS SCREEN === */
+.alert-banner {
+  background: linear-gradient(135deg, var(--red) 0%, #FF7878 100%);
+  border-radius: var(--r);
+  padding: 15px 17px;
+  color: white;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ab-icon { font-size: 30px; line-height: 1; flex-shrink: 0; }
+.ab-text h3 { font-size: 14px; font-weight: 800; }
+.ab-text p  { font-size: 11px; font-weight: 500; opacity: 0.85; margin-top: 2px; }
+
+.urgency-row {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 10px;
+}
+.u-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.u-dot.red    { background: var(--red); }
+.u-dot.yellow { background: var(--yellow); }
+.urgency-row span {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-2);
+}
+.plan-link {
+  font-size: 10px; font-weight: 800;
+  color: var(--green);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tip-card {
+  background: var(--orange-pale);
+  border-radius: var(--r);
+  padding: 14px 15px;
+  margin-top: 20px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.tip-icon { font-size: 20px; }
+.tip-title { font-size: 13px; font-weight: 800; color: #9A5E00; margin-bottom: 3px; }
+.tip-body  { font-size: 12px; font-weight: 500; color: #7A4800; line-height: 1.45; }
+
+/* === AI CHAT SCREEN === */
+.chat-hero {
+  background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 60%, var(--green-light) 100%);
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+.ai-av {
+  width: 46px; height: 46px;
+  background: rgba(255,255,255,0.20);
+  border-radius: 15px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.chat-hero-txt h3 { font-size: 14px; font-weight: 800; color: white; }
+.chat-hero-txt p  { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.80); margin-top: 2px; }
+
+.chat-msgs {
+  padding: 14px 15px;
+  display: flex; flex-direction: column;
+  gap: 12px;
+}
+.msg {
+  display: flex; gap: 8px;
+  animation: msgIn 0.25s ease;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg.user { flex-direction: row-reverse; }
+
+.msg-av {
+  width: 28px; height: 28px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.msg-av.ai   { background: var(--green-pale); }
+.msg-av.user { background: var(--orange-pale); }
+
+.msg-bubble {
+  max-width: 78%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 12.5px; font-weight: 500;
+  line-height: 1.5;
+  color: var(--text);
+}
+.msg.ai   .msg-bubble {
+  background: white;
+  border-radius: 4px 14px 14px 14px;
+  box-shadow: var(--shadow);
+}
+.msg.user .msg-bubble {
+  background: var(--green);
+  color: white;
+  border-radius: 14px 4px 14px 14px;
+}
+
+.meal-plan {
+  background: var(--green-pale);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  margin-top: 7px;
+}
+.mp-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 0;
+  font-size: 12px; font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid rgba(45,158,79,0.12);
+}
+.mp-row:last-child { border-bottom: none; }
+.mp-day { font-weight: 900; color: var(--green-dark); width: 32px; flex-shrink: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-size: 10px; font-weight: 700;
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
+
+.typing-dots {
+  display: inline-flex; gap: 4px; align-items: center;
+  padding: 4px 0;
+}
+.typing-dots span {
+  width: 6px; height: 6px;
+  background: var(--text-3);
+  border-radius: 50%;
+  animation: dot-bounce 1.2s infinite ease;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.18s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes dot-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%            { transform: translateY(-5px); }
+}
+
+.chat-input-area {
+  padding: 10px 14px 12px;
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  background: var(--bg);
+  border: none;
+  border-radius: 20px;
+  padding: 10px 14px;
+  font-family: var(--font);
+  font-size: 13px; font-weight: 500;
+  color: var(--text);
+  outline: none;
+}
+.send-btn {
+  width: 38px; height: 38px;
+  background: var(--green);
+  border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.12s;
+}
+.send-btn:active { transform: scale(0.88); background: var(--green-dark); }
+
+/* === SHOPPING SCREEN === */
+.shop-progress {
+  background: white;
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.sp-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.sp-title { font-size: 14px; font-weight: 800; color: var(--text); }
+.sp-count { font-size: 13px; font-weight: 700; color: var(--green); }
+.prog-bg {
+  background: var(--green-pale);
+  border-radius: 20px; height: 8px;
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green) 0%, var(--green-light) 100%);
+  border-radius: 20px;
+  transition: width 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.shop-section { margin-bottom: 14px; }
+.shop-sec-title {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-2);
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+.shop-item {
+  background: white;
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  display: flex; align-items: center; gap: 11px;
+  margin-bottom: 7px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.2s;
+  user-select: none;
+}
+.shop-item:active { transform: scale(0.975); }
+.shop-check {
+  width: 22px; height: 22px;
+  border-radius: 7px;
+  border: 2.5px solid var(--border);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  font-size: 12px; color: white;
+}
+.shop-item.checked .shop-check {
+  background: var(--green);
+  border-color: var(--green);
+}
+.si-icon { font-size: 21px; line-height: 1; }
+.si-info { flex: 1; }
+.si-name {
+  font-size: 13px; font-weight: 700;
+  color: var(--text);
+  transition: all 0.2s;
+}
+.si-qty {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+.shop-item.checked .si-name {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+.shop-item.checked .si-qty { color: var(--text-3); }
+.shop-item.checked { opacity: 0.75; }
+
+.add-item-btn {
+  width: 100%;
+  background: none;
+  border: 2px dashed var(--border);
+  border-radius: var(--r-sm);
+  padding: 11px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font);
+  font-size: 12px; font-weight: 700;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.add-item-btn:active {
+  background: var(--green-pale);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* === PROFILE SCREEN === */
+.profile-hero {
+  background: linear-gradient(150deg, var(--green-dark) 0%, var(--green) 55%, #5DD47A 100%);
+  padding: 22px 20px 28px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.profile-hero::before {
+  content: '';
+  position: absolute; right: -40px; top: -40px;
+  width: 150px; height: 150px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 50%;
+}
+.profile-hero::after {
+  content: '';
+  position: absolute; left: -20px; bottom: -30px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+.p-av {
+  width: 72px; height: 72px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  border: 3px solid rgba(255,255,255,0.40);
+}
+.p-name  { font-size: 20px; font-weight: 900; color: white; letter-spacing: -0.3px; }
+.p-meta  { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.75); }
+.p-stats {
+  display: flex; gap: 10px;
+  margin-top: 6px;
+}
+.ps {
+  text-align: center;
+  background: rgba(255,255,255,0.14);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.ps-num { font-size: 17px; font-weight: 900; color: white; }
+.ps-lbl { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.72); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.settings-sec { padding: 14px 20px; }
+.settings-card {
+  background: white;
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+}
+.sc-title {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-2);
+  padding: 12px 15px 6px;
+}
+.s-row {
+  padding: 12px 15px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border);
+}
+.s-row:first-of-type { border-top: none; }
+.s-left { display: flex; align-items: center; gap: 9px; }
+.s-ico  { font-size: 19px; width: 28px; text-align: center; }
+.s-lbl  { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.toggle {
+  width: 46px; height: 27px;
+  border-radius: 14px;
+  background: #D8D8D8;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  border: none;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 21px; height: 21px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.18);
+}
+.toggle.on { background: var(--green); }
+.toggle.on::after { transform: translateX(19px); }
+
+.stepper {
+  display: flex; align-items: center; gap: 10px;
+}
+.step-btn {
+  width: 28px; height: 28px;
+  border-radius: 9px;
+  background: var(--green-pale);
+  border: none;
+  color: var(--green-dark);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font);
+  transition: background 0.12s, transform 0.1s;
+}
+.step-btn:active { background: var(--green); color: white; transform: scale(0.9); }
+.step-val { font-size: 17px; font-weight: 900; color: var(--text); min-width: 18px; text-align: center; }
+
+.hh-input {
+  font-family: var(--font);
+  font-size: 13px; font-weight: 700;
+  color: var(--text-2);
+  border: none; outline: none;
+  background: transparent;
+  text-align: right;
+  max-width: 130px;
+}
+
+/* === BOTTOM NAVIGATION === */
+.bottom-nav {
+  flex-shrink: 0;
+  height: 76px;
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 0 6px 8px;
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 7px 10px;
+  border-radius: 14px;
+  border: none; background: none;
+  transition: background 0.18s;
+  min-width: 54px;
+  position: relative;
+}
+.nav-ico  { font-size: 22px; line-height: 1; transition: transform 0.2s; }
+.nav-lbl  {
+  font-size: 9px; font-weight: 800;
+  color: var(--text-3);
+  font-family: var(--font);
+  transition: color 0.18s;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.nav-btn.active { background: var(--green-pale); }
+.nav-btn.active .nav-lbl { color: var(--green-dark); }
+.nav-btn.active .nav-ico { transform: scale(1.12); }
+
+/* Alert badge on nav */
+.nav-btn .badge {
+  position: absolute;
+  top: 5px; right: 8px;
+  width: 16px; height: 16px;
+  background: var(--red);
+  border-radius: 50%;
+  font-size: 9px; font-weight: 900;
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid white;
+}
+
+/* === ADD PRODUCT MODAL === */
+.modal-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 50;
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.modal-sheet {
+  background: white;
+  border-radius: 28px 28px 0 0;
+  width: 100%;
+  padding: 20px 20px 24px;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+
+.modal-handle {
+  width: 38px; height: 4px;
+  background: #E0E0E0;
+  border-radius: 2px;
+  margin: 0 auto 18px;
+}
+.modal-title { font-size: 18px; font-weight: 900; color: var(--text); margin-bottom: 14px; }
+.modal-input {
+  width: 100%;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-family: var(--font);
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  outline: none;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.modal-input:focus { border-color: var(--green); }
+.modal-submit {
+  width: 100%;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 14px;
+  font-family: var(--font);
+  font-size: 14px; font-weight: 800;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+.modal-submit:active { background: var(--green-dark); }
+
+/* === SCALE DOWN FOR SMALL SCREENS === */
+@media (max-height: 900px) {
+  .phone-outer { transform: scale(0.92); transform-origin: center; }
+}
+@media (max-height: 820px) {
+  .phone-outer { transform: scale(0.84); transform-origin: center; }
+}
+@media (max-height: 740px) {
+  .phone-outer { transform: scale(0.76); transform-origin: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-outer">
+  <div class="phone-frame">
+    <div class="phone-screen">
+
+      <!-- Notch -->
+      <div class="notch">
+        <div class="notch-cam"></div>
+        <div class="notch-spk"></div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-icons">
+          <span>●●●</span>
+          <span style="font-size:11px;font-weight:700;margin-left:2px;">WiFi</span>
+          <span>🔋</span>
+        </div>
+      </div>
+
+      <!-- ===================== SCREENS ===================== -->
+      <div class="screens-container">
+
+        <!-- ========== SCREEN 1: PANTRY ========== -->
+        <div class="screen active" id="screen-pantry">
+          <div class="screen-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div class="screen-title">🧊 Frigiderul meu</div>
+                <div class="screen-sub">9 produse · Actualizat acum</div>
+              </div>
+              <div style="background:var(--green-pale);border-radius:12px;padding:8px 12px;text-align:center;line-height:1.2;">
+                <div style="font-size:10px;font-weight:800;color:var(--green-dark);text-transform:uppercase;letter-spacing:0.5px;">APR</div>
+                <div style="font-size:18px;font-weight:900;color:var(--green);">28</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen-body">
+            <!-- Stats -->
+            <div class="pantry-stats">
+              <div class="stat-card red">
+                <span class="stat-num">3</span>
+                <span class="stat-lbl">Urgent</span>
+              </div>
+              <div class="stat-card yellow">
+                <span class="stat-num">3</span>
+                <span class="stat-lbl">În curând</span>
+              </div>
+              <div class="stat-card green">
+                <span class="stat-num">3</span>
+                <span class="stat-lbl">OK</span>
+              </div>
+            </div>
+
+            <!-- Red items -->
+            <div class="section-label" style="color:var(--red);">🔴 Expiră Imediat</div>
+            <div class="product-list">
+              <div class="product-card red">
+                <span class="p-icon">🍞</span>
+                <div class="p-info">
+                  <div class="p-name">Pâine</div>
+                  <div class="p-qty">1 pâine · Vel Pitar</div>
+                </div>
+                <span class="exp-badge red">Azi</span>
+              </div>
+              <div class="product-card red">
+                <span class="p-icon">🥛</span>
+                <div class="p-info">
+                  <div class="p-name">Lapte</div>
+                  <div class="p-qty">1.5L · Zuzu</div>
+                </div>
+                <span class="exp-badge red">Mâine</span>
+              </div>
+              <div class="product-card red">
+                <span class="p-icon">🧀</span>
+                <div class="p-info">
+                  <div class="p-name">Brânză</div>
+                  <div class="p-qty">200g · Delaco</div>
+                </div>
+                <span class="exp-badge red">30 Apr</span>
+              </div>
+            </div>
+
+            <!-- Yellow items -->
+            <div class="section-label" style="color:#B87C00;">🟡 Folosiți în Curând</div>
+            <div class="product-list">
+              <div class="product-card yellow">
+                <span class="p-icon">🍶</span>
+                <div class="p-info">
+                  <div class="p-name">Iaurt</div>
+                  <div class="p-qty">400g · Danone</div>
+                </div>
+                <span class="exp-badge yellow">4 zile</span>
+              </div>
+              <div class="product-card yellow">
+                <span class="p-icon">🍎</span>
+                <div class="p-info">
+                  <div class="p-name">Mere</div>
+                  <div class="p-qty">1 kg</div>
+                </div>
+                <span class="exp-badge yellow">5 zile</span>
+              </div>
+              <div class="product-card yellow">
+                <span class="p-icon">🍅</span>
+                <div class="p-info">
+                  <div class="p-name">Roșii</div>
+                  <div class="p-qty">300g · Bio</div>
+                </div>
+                <span class="exp-badge yellow">6 zile</span>
+              </div>
+            </div>
+
+            <!-- Green items -->
+            <div class="section-label" style="color:var(--green-dark);">🟢 Totul e OK</div>
+            <div class="product-list">
+              <div class="product-card green">
+                <span class="p-icon">🥕</span>
+                <div class="p-info">
+                  <div class="p-name">Morcovi</div>
+                  <div class="p-qty">500g · Bio Market</div>
+                </div>
+                <span class="exp-badge green">10 zile</span>
+              </div>
+              <div class="product-card green">
+                <span class="p-icon">🥚</span>
+                <div class="p-info">
+                  <div class="p-name">Ouă</div>
+                  <div class="p-qty">6 buc · Ferma</div>
+                </div>
+                <span class="exp-badge green">12 zile</span>
+              </div>
+              <div class="product-card green">
+                <span class="p-icon">🧅</span>
+                <div class="p-info">
+                  <div class="p-name">Ceapă</div>
+                  <div class="p-qty">3 buc · Piața</div>
+                </div>
+                <span class="exp-badge green">14 zile</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- FAB -->
+          <button class="fab" id="fab-btn">+</button>
+        </div>
+
+
+        <!-- ========== SCREEN 2: ALERTS ========== -->
+        <div class="screen" id="screen-alerts">
+          <div class="screen-header">
+            <div class="screen-title">⏰ Alerte Expirare</div>
+            <div class="screen-sub">Acționează înainte să fie prea târziu</div>
+          </div>
+
+          <div class="screen-body">
+            <div class="alert-banner">
+              <div class="ab-icon">⚠️</div>
+              <div class="ab-text">
+                <h3>3 produse expiră în 2 zile!</h3>
+                <p>Planifică o masă acum · Evită risipa</p>
+              </div>
+            </div>
+
+            <div class="urgency-row">
+              <div class="u-dot red"></div>
+              <span>Expiră Imediat — Acționează Azi</span>
+            </div>
+            <div class="product-list" style="margin-bottom:20px;">
+              <div class="product-card red">
+                <span class="p-icon">🍞</span>
+                <div class="p-info">
+                  <div class="p-name">Pâine</div>
+                  <div class="p-qty">Expiră <strong>Azi</strong></div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+                  <span class="exp-badge red">Azi</span>
+                  <span class="plan-link" onclick="showScreen('ai', document.querySelectorAll('.nav-btn')[2])">Planifică →</span>
+                </div>
+              </div>
+              <div class="product-card red">
+                <span class="p-icon">🥛</span>
+                <div class="p-info">
+                  <div class="p-name">Lapte</div>
+                  <div class="p-qty">Expiră <strong>Mâine</strong></div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+                  <span class="exp-badge red">Mâine</span>
+                  <span class="plan-link" onclick="showScreen('ai', document.querySelectorAll('.nav-btn')[2])">Planifică →</span>
+                </div>
+              </div>
+              <div class="product-card red">
+                <span class="p-icon">🧀</span>
+                <div class="p-info">
+                  <div class="p-name">Brânză</div>
+                  <div class="p-qty">Expiră <strong>30 Apr</strong></div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+                  <span class="exp-badge red">30 Apr</span>
+                  <span class="plan-link" onclick="showScreen('ai', document.querySelectorAll('.nav-btn')[2])">Planifică →</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="urgency-row">
+              <div class="u-dot yellow"></div>
+              <span>Expiră Curând — Planifică Săptămâna</span>
+            </div>
+            <div class="product-list">
+              <div class="product-card yellow">
+                <span class="p-icon">🍶</span>
+                <div class="p-info">
+                  <div class="p-name">Iaurt</div>
+                  <div class="p-qty">Expiră în 4 zile</div>
+                </div>
+                <span class="exp-badge yellow">4 zile</span>
+              </div>
+              <div class="product-card yellow">
+                <span class="p-icon">🍎</span>
+                <div class="p-info">
+                  <div class="p-name">Mere</div>
+                  <div class="p-qty">Expiră în 5 zile</div>
+                </div>
+                <span class="exp-badge yellow">5 zile</span>
+              </div>
+              <div class="product-card yellow">
+                <span class="p-icon">🍅</span>
+                <div class="p-info">
+                  <div class="p-name">Roșii</div>
+                  <div class="p-qty">Expiră în 6 zile</div>
+                </div>
+                <span class="exp-badge yellow">6 zile</span>
+              </div>
+            </div>
+
+            <div class="tip-card">
+              <span class="tip-icon">💡</span>
+              <div>
+                <div class="tip-title">Sfat de la Frigo</div>
+                <div class="tip-body">Pâinea + lapte + ouă = budincă de pâine în 20 min. Perfect pentru azi seară — zero risipă! 🍮</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ========== SCREEN 3: AI MEAL PLAN ========== -->
+        <div class="screen screen-chat" id="screen-ai">
+          <div class="chat-scroll">
+            <div class="chat-hero">
+              <div class="ai-av">🤖</div>
+              <div class="chat-hero-txt">
+                <h3>Frigo AI Chef</h3>
+                <p>Bazat pe frigiderul tău · Activ acum</p>
+              </div>
+            </div>
+
+            <div class="chat-msgs" id="chat-msgs">
+
+              <div class="msg ai">
+                <div class="msg-av ai">🤖</div>
+                <div class="msg-bubble">
+                  Bună! 👋 Văd că ai <strong>morcovi, ouă, iaurt, lapte și brânză</strong> acasă. Ce ți-ar plăcea să mănânci săptămâna asta?
+                </div>
+              </div>
+
+              <div class="msg user">
+                <div class="msg-av user">😊</div>
+                <div class="msg-bubble">
+                  Ceva cu morcovi și ouă, poate o supă. Ceva simplu și bun.
+                </div>
+              </div>
+
+              <div class="msg ai">
+                <div class="msg-av ai">🤖</div>
+                <div class="msg-bubble">
+                  Perfect! Uite un plan care folosește tot ce expiră curând 🎯
+                  <div class="meal-plan">
+                    <div class="mp-row"><span class="mp-day">Lun</span><span>Omletă cu morcovi și ceapă 🥕</span></div>
+                    <div class="mp-row"><span class="mp-day">Mar</span><span>Supă cremă de morcovi 🍲</span></div>
+                    <div class="mp-row"><span class="mp-day">Mie</span><span>Salată cu ouă și roșii 🥗</span></div>
+                    <div class="mp-row"><span class="mp-day">Joi</span><span>Papanași cu iaurt 🍩</span></div>
+                    <div class="mp-row"><span class="mp-day">Vin</span><span>Pizza rapidă cu brânză 🍕</span></div>
+                  </div>
+                  <div style="margin-top:8px;font-size:11px;font-weight:700;color:var(--green-dark);">✅ Pâinea și laptele vor fi consumate înainte să expire!</div>
+                </div>
+              </div>
+
+              <div class="msg user">
+                <div class="msg-av user">😊</div>
+                <div class="msg-bubble">
+                  Super! Adaugă și ceva dulce, am chef de desert. 🍰
+                </div>
+              </div>
+
+              <div class="msg ai">
+                <div class="msg-av ai">🤖</div>
+                <div class="msg-bubble">
+                  Adăugat! Joi facem și o <strong>budincă de lapte cu mere</strong> — simplu, rapid, și folosim laptele înainte să expire! 🎉
+                  <br><br>
+                  Lista de cumpărături e gata cu tot ce ai nevoie.
+                  <div class="chips">
+                    <span class="chip">🛒 8 de cumpărat</span>
+                    <span class="chip">💚 0 risipă</span>
+                    <span class="chip">⏱ 30 min/zi</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <input class="chat-input" id="chat-field" placeholder="Scrie un mesaj...">
+            <button class="send-btn" id="send-btn">&#10148;</button>
+          </div>
+        </div>
+
+
+        <!-- ========== SCREEN 4: SHOPPING ========== -->
+        <div class="screen" id="screen-shopping">
+          <div class="screen-header">
+            <div class="screen-title">🛒 Cumpărături</div>
+            <div class="screen-sub">Generat din planul tău de mese</div>
+          </div>
+
+          <div class="screen-body">
+            <div class="shop-progress">
+              <div class="sp-header">
+                <span class="sp-title">Progres</span>
+                <span class="sp-count" id="prog-count">2 / 8</span>
+              </div>
+              <div class="prog-bg">
+                <div class="prog-fill" id="prog-bar" style="width:25%;"></div>
+              </div>
+            </div>
+
+            <div class="shop-section">
+              <div class="shop-sec-title">De cumpărat</div>
+
+              <div class="shop-item" onclick="toggleItem(this)">
+                <div class="shop-check"></div>
+                <span class="si-icon">🌾</span>
+                <div class="si-info">
+                  <div class="si-name">Făină</div>
+                  <div class="si-qty">500g</div>
+                </div>
+              </div>
+              <div class="shop-item" onclick="toggleItem(this)">
+                <div class="shop-check"></div>
+                <span class="si-icon">🍬</span>
+                <div class="si-info">
+                  <div class="si-name">Zahăr</div>
+                  <div class="si-qty">1 kg</div>
+                </div>
+              </div>
+              <div class="shop-item" onclick="toggleItem(this)">
+                <div class="shop-check"></div>
+                <span class="si-icon">🧈</span>
+                <div class="si-info">
+                  <div class="si-name">Unt</div>
+                  <div class="si-qty">200g</div>
+                </div>
+              </div>
+              <div class="shop-item" onclick="toggleItem(this)">
+                <div class="shop-check"></div>
+                <span class="si-icon">🍝</span>
+                <div class="si-info">
+                  <div class="si-name">Paste</div>
+                  <div class="si-qty">500g</div>
+                </div>
+              </div>
+              <div class="shop-item" onclick="toggleItem(this)">
+                <div class="shop-check"></div>
+                <span class="si-icon">🥩</span>
+                <div class="si-info">
+                  <div class="si-name">Carne tocată</div>
+                  <div class="si-qty">400g</div>
+                </div>
+              </div>
+              <div class="shop-item" onclick="toggleItem(this)">
+                <div class="shop-check"></div>
+                <span class="si-icon">🫒</span>
+                <div class="si-info">
+                  <div class="si-name">Ulei de măsline</div>
+                  <div class="si-qty">250ml</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shop-section">
+              <div class="shop-sec-title">Deja ai acasă ✓</div>
+
+              <div class="shop-item checked" onclick="toggleItem(this)">
+                <div class="shop-check">✓</div>
+                <span class="si-icon">🥕</span>
+                <div class="si-info">
+                  <div class="si-name">Morcovi</div>
+                  <div class="si-qty">500g disponibili</div>
+                </div>
+              </div>
+              <div class="shop-item checked" onclick="toggleItem(this)">
+                <div class="shop-check">✓</div>
+                <span class="si-icon">🥚</span>
+                <div class="si-info">
+                  <div class="si-name">Ouă</div>
+                  <div class="si-qty">6 buc disponibile</div>
+                </div>
+              </div>
+            </div>
+
+            <button class="add-item-btn" onclick="alert('Funcție în curând! 🚀')">
+              <span style="font-size:16px;font-weight:800;">+</span>
+              <span>Adaugă produs manual</span>
+            </button>
+          </div>
+        </div>
+
+
+        <!-- ========== SCREEN 5: PROFILE ========== -->
+        <div class="screen" id="screen-profile">
+          <div class="profile-hero">
+            <div class="p-av">👩‍🍳</div>
+            <div class="p-name">Familia Popescu</div>
+            <div class="p-meta">Cont activ din Ianuarie 2024</div>
+            <div class="p-stats">
+              <div class="ps">
+                <div class="ps-num">47</div>
+                <div class="ps-lbl">Mese planificate</div>
+              </div>
+              <div class="ps">
+                <div class="ps-num">12 kg</div>
+                <div class="ps-lbl">Risipă evitată</div>
+              </div>
+              <div class="ps">
+                <div class="ps-num">280 lei</div>
+                <div class="ps-lbl">Economisiți</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-sec">
+            <!-- Household -->
+            <div class="settings-card">
+              <div class="sc-title">Gospodăria ta</div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">🏠</span>
+                  <span class="s-lbl">Numele gospodăriei</span>
+                </div>
+                <input class="hh-input" value="Familia Popescu">
+              </div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">👥</span>
+                  <span class="s-lbl">Persoane în casă</span>
+                </div>
+                <div class="stepper">
+                  <button class="step-btn" onclick="step(-1)">−</button>
+                  <span class="step-val" id="step-val">4</span>
+                  <button class="step-btn" onclick="step(1)">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Diet -->
+            <div class="settings-card">
+              <div class="sc-title">Preferințe alimentare</div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">🥗</span>
+                  <span class="s-lbl">Vegetarian</span>
+                </div>
+                <button class="toggle" onclick="this.classList.toggle('on')"></button>
+              </div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">🥛</span>
+                  <span class="s-lbl">Fără lactoză</span>
+                </div>
+                <button class="toggle" onclick="this.classList.toggle('on')"></button>
+              </div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">🌾</span>
+                  <span class="s-lbl">Fără gluten</span>
+                </div>
+                <button class="toggle" onclick="this.classList.toggle('on')"></button>
+              </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-card">
+              <div class="sc-title">Notificări</div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">🔔</span>
+                  <span class="s-lbl">Alerte expirare</span>
+                </div>
+                <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+              </div>
+              <div class="s-row">
+                <div class="s-left">
+                  <span class="s-ico">🛒</span>
+                  <span class="s-lbl">Mementouri cumpărături</span>
+                </div>
+                <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+              </div>
+            </div>
+
+            <div style="text-align:center;padding:8px 0 16px;font-size:11px;font-weight:700;color:var(--text-3);">
+              Frigo v1.0 · Făcut cu ❤️ în România 🇷🇴
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- /screens-container -->
+
+
+      <!-- ===================== BOTTOM NAV ===================== -->
+      <nav class="bottom-nav">
+        <button class="nav-btn active" id="nav-pantry" onclick="showScreen('pantry',this)">
+          <span class="nav-ico">🧊</span>
+          <span class="nav-lbl">Frigider</span>
+        </button>
+        <button class="nav-btn" id="nav-alerts" onclick="showScreen('alerts',this)">
+          <span class="nav-ico">⏰</span>
+          <span class="nav-lbl">Alerte</span>
+          <span class="badge">6</span>
+        </button>
+        <button class="nav-btn" id="nav-ai" onclick="showScreen('ai',this)">
+          <span class="nav-ico">✨</span>
+          <span class="nav-lbl">Planificare</span>
+        </button>
+        <button class="nav-btn" id="nav-shopping" onclick="showScreen('shopping',this)">
+          <span class="nav-ico">🛒</span>
+          <span class="nav-lbl">Cumpărături</span>
+        </button>
+        <button class="nav-btn" id="nav-profile" onclick="showScreen('profile',this)">
+          <span class="nav-ico">👤</span>
+          <span class="nav-lbl">Profil</span>
+        </button>
+      </nav>
+
+
+      <!-- ===================== ADD PRODUCT MODAL ===================== -->
+      <div class="modal-overlay" id="modal">
+        <div class="modal-sheet">
+          <div class="modal-handle"></div>
+          <div class="modal-title">➕ Adaugă Produs</div>
+          <input class="modal-input" placeholder="Numele produsului (ex: Lapte)">
+          <input class="modal-input" placeholder="Cantitate (ex: 1L, 500g, 6 buc)">
+          <input class="modal-input" type="date">
+          <button class="modal-submit" onclick="closeModal()">Adaugă în frigider 🧊</button>
+        </div>
+      </div>
+
+    </div><!-- /phone-screen -->
+  </div><!-- /phone-frame -->
+</div><!-- /phone-outer -->
+
+
+<script>
+/* === SCREEN NAVIGATION === */
+function showScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* === FAB / MODAL === */
+document.getElementById('fab-btn').addEventListener('click', () => {
+  document.getElementById('modal').classList.add('open');
+});
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+/* === SHOPPING CHECKBOXES === */
+function toggleItem(el) {
+  el.classList.toggle('checked');
+  const cb = el.querySelector('.shop-check');
+  cb.textContent = el.classList.contains('checked') ? '✓' : '';
+  updateProgress();
+}
+
+function updateProgress() {
+  const all     = document.querySelectorAll('.shop-item').length;
+  const checked = document.querySelectorAll('.shop-item.checked').length;
+  const pct = Math.round((checked / all) * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-count').textContent = checked + ' / ' + all;
+}
+
+/* === STEPPER === */
+let stepVal = 4;
+function step(delta) {
+  stepVal = Math.max(1, Math.min(6, stepVal + delta));
+  document.getElementById('step-val').textContent = stepVal;
+}
+
+/* === CHAT === */
+const chatMsgs = document.getElementById('chat-msgs');
+const chatScroll = document.querySelector('.chat-scroll');
+
+document.getElementById('send-btn').addEventListener('click', sendChat);
+document.getElementById('chat-field').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendChat();
+});
+
+const aiReplies = [
+  'Notez! Voi actualiza planul. 😊 Verifică secțiunea <strong>Cumpărături</strong> pentru lista actualizată.',
+  'Super idee! Am adăugat asta la planul tău de săptămâna aceasta. 🥗',
+  'Interesant! Pot sugera câteva rețete bazate pe ce ai în frigider. Verifică planul actualizat! 🍽️',
+  'Înțeles! Am ținut cont de preferința ta. Planul e actualizat! ✅',
+];
+let replyIdx = 0;
+
+function sendChat() {
+  const field = document.getElementById('chat-field');
+  const txt = field.value.trim();
+  if (!txt) return;
+
+  // User bubble
+  const userEl = document.createElement('div');
+  userEl.className = 'msg user';
+  userEl.innerHTML = `<div class="msg-av user">😊</div><div class="msg-bubble">${txt}</div>`;
+  chatMsgs.appendChild(userEl);
+  field.value = '';
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+
+  // Typing indicator
+  const typingEl = document.createElement('div');
+  typingEl.className = 'msg ai';
+  typingEl.innerHTML = `<div class="msg-av ai">🤖</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  chatMsgs.appendChild(typingEl);
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+
+  setTimeout(() => {
+    const reply = aiReplies[replyIdx % aiReplies.length];
+    replyIdx++;
+    typingEl.querySelector('.msg-bubble').innerHTML = reply;
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }, 1400);
+}
+
+/* === INIT === */
+updateProgress();
+</script>
+</body>
+</html>

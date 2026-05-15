@@ -80,21 +80,6 @@ class _LoginNotifier extends StateNotifier<_LoginState> {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      await _repo.signInWithGoogle(rememberMe: state.rememberMe);
-      state = state.copyWith(isLoading: false);
-      // Router handles navigation via _AuthNotifier → authStateChanges
-    } on FirebaseAuthException catch (e) {
-      state = state.copyWith(isLoading: false, error: _mapError(e.code));
-    } catch (_) {
-      state = state.copyWith(
-          isLoading: false,
-          error: 'Autentificarea cu Google a eșuat. Încearcă din nou.');
-    }
-  }
-
   String _mapError(String code) => switch (code) {
         'user-not-found' => 'Nu există un cont cu acest email.',
         'wrong-password' ||
@@ -144,11 +129,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (route != null && mounted) context.go(route);
   }
 
-  Future<void> _googleSignIn() async {
-    await ref.read(_loginProvider.notifier).signInWithGoogle();
-    // Router's _AuthNotifier handles redirect via authStateChanges — no manual go() needed
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(_loginProvider);
@@ -187,9 +167,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    const SizedBox(height: 32),
-                    _buildLogo(theme, state.isRegisterMode),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 48),
+                    _buildLogo(),
+                    const SizedBox(height: 40),
                     _buildCard(context, state, theme),
                     const SizedBox(height: 20),
                     TextButton(
@@ -286,45 +266,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildLogo(ThemeData theme, bool isRegisterMode) {
-    return Column(
-      children: [
-        Container(
-          width: 76,
-          height: 76,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha:0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Center(
-            child: isRegisterMode
-                ? const Icon(Icons.person_add_outlined,
-                    color: AppColors.darkTeal, size: 38)
-                : const Text('🧊', style: TextStyle(fontSize: 38)),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Frigo',
-          style: theme.textTheme.displaySmall?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        Text(
-          'Gestionează-ți frigiderul inteligent',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha:0.9),
-          ),
-        ),
-      ],
+  Widget _buildLogo() {
+    return Image.asset(
+      'assets/images/logo+name.png',
+      width: 180,
+      fit: BoxFit.contain,
     );
   }
 
@@ -445,12 +391,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const _OrDivider(),
-              const SizedBox(height: 16),
-              _GoogleButton(
-                onTap: state.isLoading ? null : _googleSignIn,
-              ),
             ],
           ),
         ),
@@ -493,78 +433,3 @@ class _ErrorBox extends StatelessWidget {
   }
 }
 
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider()),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'sau',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppColors.textSecondary),
-          ),
-        ),
-        const Expanded(child: Divider()),
-      ],
-    );
-  }
-}
-
-class _GoogleButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  const _GoogleButton({this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          side: BorderSide(color: Colors.grey.shade300),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: const Center(
-                child: Text(
-                  'G',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF4285F4),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Continuă cu Google',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

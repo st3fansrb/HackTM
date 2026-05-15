@@ -10,6 +10,7 @@ import '../constants/app_colors.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
+import '../../features/auth/presentation/preferences_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 import '../../features/cart/presentation/cart_scanner_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
@@ -40,6 +41,15 @@ Future<bool> _hasOnboarded(String uid) async {
   }
 }
 
+Future<bool> _hasCompletedPrefs(String uid) async {
+  try {
+    final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
+    return doc.data()?['manualPrefs']?['completedOnboarding'] == true;
+  } catch (_) {
+    return true;
+  }
+}
+
 // ─── Router provider ─────────────────────────────────────────────────────────
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -59,7 +69,10 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (loc == '/login') {
         final onboarded = await _hasOnboarded(user.uid);
-        return onboarded ? '/pantry' : '/onboarding';
+        if (!onboarded) return '/onboarding';
+        final prefsCompleted = await _hasCompletedPrefs(user.uid);
+        if (!prefsCompleted) return '/preferences?onboarding=true';
+        return '/pantry';
       }
 
       return null;
@@ -67,6 +80,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
       GoRoute(path: '/onboarding', builder: (c, s) => const OnboardingScreen()),
+      GoRoute(
+        path: '/preferences',
+        builder: (c, s) => PreferencesScreen(
+          showOnboardingBanner:
+              s.uri.queryParameters['onboarding'] == 'true',
+        ),
+      ),
       GoRoute(
         path: '/shopping-list',
         builder: (c, s) => const ShoppingListScreen(),
@@ -183,11 +203,11 @@ class _BottomNav extends StatelessWidget {
 
   // index 2 (AI) is rendered separately as _AiNavItem
   static const _tabs = [
-    (Icons.kitchen_outlined,       Icons.kitchen,        'Frigider'),
-    (Icons.menu_book_outlined,     Icons.menu_book,      'Rețete'),
-    (Icons.auto_awesome_outlined,  Icons.auto_awesome,   ''),       // AI — special
-    (Icons.shopping_cart_outlined, Icons.shopping_cart,  'Coș'),
-    (Icons.person_outline,         Icons.person,         'Profil'),
+    (Icons.kitchen_outlined,          Icons.kitchen,           'Frigider'),
+    (Icons.menu_book_outlined,        Icons.menu_book,         'Rețete'),
+    (Icons.auto_awesome_outlined,     Icons.auto_awesome,      ''),      // AI — special
+    (Icons.shopping_cart_outlined,    Icons.shopping_cart,     'Coș'),
+    (Icons.person_outline,            Icons.person,            'Profil'),
   ];
 
   @override

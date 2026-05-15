@@ -75,6 +75,12 @@ class _CartBody extends ConsumerWidget {
         title: '🛒 Coș',
         subtitle: n == 0 ? 'Coșul e gol' : '$n ${n == 1 ? 'produs' : 'produse'}',
         actions: [
+          if (items.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: Colors.white),
+              tooltip: 'Golește lista',
+              onPressed: () => _clearCart(context, ref),
+            ),
           IconButton(
             icon: const Icon(Icons.assignment_outlined, color: Colors.white),
             tooltip: 'Listă cumpărături',
@@ -141,6 +147,46 @@ class _CartBody extends ConsumerWidget {
               .read(cartRepositoryProvider)
               .updateItem(uid, item.copyWith(expiryDate: date));
         },
+      ),
+    );
+  }
+
+  Future<void> _clearCart(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Golește coșul'),
+        content: const Text('Ești sigur? Lista va fi ștearsă.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.expiredRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Golește',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    await ref.read(cartRepositoryProvider).clearCart(uid);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Lista a fost golită'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.darkEmerald,
       ),
     );
   }

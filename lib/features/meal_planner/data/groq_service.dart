@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import '../../../features/auth/domain/user_preferences.dart';
 import '../../../features/auth/domain/user_profile.dart';
 import '../../pantry/domain/food_item.dart';
 import 'chat_message.dart';
@@ -10,6 +12,8 @@ class GroqService {
   static const _model = 'llama-3.3-70b-versatile';
   static const _endpoint =
       'https://api.groq.com/openai/v1/chat/completions';
+
+  static List<Map<String, dynamic>>? _cachedRecipes;
 
   static const _systemPromptBase =
       'Ești Frigo AI, asistentul inteligent pentru reducerea risipei alimentare.\n'
@@ -31,11 +35,135 @@ class GroqService {
       '2. Pas 2\n\n'
       'Nu devia de la acest format când e cerută o rețetă.';
 
-  String _buildProfileContext(UserProfile profile, [ExtractedPreferences? prefs]) {
+  Future<List<Map<String, dynamic>>> _loadRecipes() async {
+    if (_cachedRecipes != null) return _cachedRecipes!;
+    final raw = await rootBundle.loadString('assets/data/recipes_database.json');
+    final json = jsonDecode(raw) as Map<String, dynamic>;
+    final all = <Map<String, dynamic>>[];
+    for (final category in json.values) {
+      if (category is List) all.addAll(category.cast<Map<String, dynamic>>());
+    }
+    _cachedRecipes = all;
+    return all;
+  }
+
+  List<Map<String, dynamic>> _filterRecipes(
+    List<Map<String, dynamic>> all,
+    List<FoodItem> pantryItems,
+    ExtractedPreferences? prefs, {
+    List<String> expiringIngredients = const [],
+    String? craving,
+  }) {
+    final pantryNames = pantryItems.map((i) => i.name.toLowerCase()).toList();
+    final disliked = prefs?.disliked.map((d) => d.toLowerCase()).toList() ?? [];
+    final liked = prefs?.liked.map((l) => l.toLowerCase()).toList() ?? [];
+    final cravingWords = (craving ?? '')
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length > 2)
+        .toList();
+    final expiringLower = expiringIngredients.map((e) => e.toLowerCase()).toList();
+
+    bool hasDisliked(List<dynamic> ings) => ings.any(
+          (ing) => disliked.any((d) => ing.toString().toLowerCase().contains(d)),
+        );
+
+    final withScores = all
+        .where((r) => !hasDisliked(r['ingredients'] as List))
+        .map((r) {
+          final ings = (r['ingredients'] as List)
+              .map((i) => i.toString().toLowerCase())
+              .toList();
+          final name = (r['name'] as String).toLowerCase();
+          final total = ings.length;
+
+          // scor pantry: 0.0–0.3
+          final matched = ings
+              .where((ing) =>
+                  pantryNames.any((p) => ing.contains(p) || p.contains(ing)))
+              .length;
+          final pantryScore = total > 0 ? (matched / total) * 0.3 : 0.0;
+
+          // bonus poftă: +1.0
+          double cravingBonus = 0.0;
+          if (cravingWords.isNotEmpty &&
+              (cravingWords.any((w) => name.contains(w)) ||
+               cravingWords.any((w) => ings.any((ing) => ing.contains(w))))) {
+            cravingBonus = 1.0;
+          }
+
+          // bonus expirare: +0.6
+          final expiryBonus = expiringLower.any((exp) =>
+                  ings.any((ing) => ing.contains(exp) || exp.contains(ing)))
+              ? 0.6
+              : 0.0;
+
+          // bonus liked: +0.4
+          final likedBonus =
+              liked.any((l) => ings.any((ing) => ing.contains(l))) ? 0.4 : 0.0;
+
+          return (
+            recipe: r,
+            score: pantryScore + cravingBonus + expiryBonus + likedBonus,
+            pantryScore: pantryScore,
+            cravingBonus: cravingBonus,
+            expiryBonus: expiryBonus,
+          );
+        })
+        .toList();
+
+    // include doar rețete cu cel puțin un criteriu de relevanță
+    final relevant = withScores
+        .where((e) => e.pantryScore > 0 || e.cravingBonus > 0 || e.expiryBonus > 0)
+        .toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+
+    final result = relevant.map((e) => e.recipe).toList();
+
+    // fallback: completează până la 8 cu rețete care au scor pantry > 0
+    if (result.length < 6) {
+      final extras = withScores
+          .where((e) => e.pantryScore > 0 && !result.contains(e.recipe))
+          .toList()
+        ..sort((a, b) => b.pantryScore.compareTo(a.pantryScore));
+      for (final e in extras) {
+        if (result.length >= 8) break;
+        result.add(e.recipe);
+      }
+    }
+
+    return result;
+  }
+
+  String _buildRecipeContext(List<Map<String, dynamic>> recipes) {
+    final sb = StringBuffer('Baza de date rețete (alege EXCLUSIV din această listă):\n');
+    for (final r in recipes) {
+      final ingredients = (r['ingredients'] as List).join(', ');
+      sb.writeln('[${r['type']}] ${r['name']} (${r['prep_time_minutes']} min): $ingredients');
+    }
+    return sb.toString();
+  }
+
+  String _buildProfileContext(
+    UserProfile profile, [
+    ExtractedPreferences? prefs,
+    UserPreferences? userPrefs,
+  ]) {
     final hasPrefs = prefs != null &&
         (prefs.disliked.isNotEmpty ||
             prefs.liked.isNotEmpty ||
             prefs.dietary.isNotEmpty);
+    final hasUserPrefs = userPrefs != null && !userPrefs.isEmpty;
+
+    final userPrefsBlock = hasUserPrefs
+        ? '\n\nPREFERINȚELE UTILIZATORULUI (respectă ÎNTOTDEAUNA fără excepție):\n'
+            '${userPrefs.allergies.isNotEmpty ? "Alergii: ${userPrefs.allergies.join(', ')}\n" : ""}'
+            '${userPrefs.dietaryRestrictions.isNotEmpty ? "Restricții dietetice: ${userPrefs.dietaryRestrictions.join(', ')}\n" : ""}'
+            '${userPrefs.dislikedIngredients.isNotEmpty ? "Ingrediente evitate: ${userPrefs.dislikedIngredients.join(', ')}\n" : ""}'
+            '${userPrefs.preferredCuisines.isNotEmpty ? "Bucătării preferate: ${userPrefs.preferredCuisines.join(', ')}\n" : ""}'
+            'Nu sugera NICIODATĂ alimente sau rețete care conțin ingredientele din alergii sau restricții dietetice.'
+        : '';
+
     return 'Profil utilizator:\n'
         'Nume: ${profile.displayName}\n'
         'Persoane în gospodărie: ${profile.householdSize}\n'
@@ -49,7 +177,8 @@ class GroqService {
             '- Un ingredient din lista de disliked/liked acoperă toate variantele sale: forme flexionate, derivate, compuse și produse asociate.\n'
             '- Exemple: "ardei" → "boia de ardei", "ardei iute", "ardeiul", "ardei roșu", "ardei kapia"; "lactate" → "lapte", "smântână", "unt", "iaurt", "brânză"; "porc" → "costiță", "slănină", "carne de porc", "kaiser".\n'
             '- Dacă un ingredient din rețetă este semantic legat de un disliked ingredient, tratează rețeta ca nepotrivită.\n'
-            '- Aplică aceeași logică și pentru dietaryRestrictions.' : ''}';
+            '- Aplică aceeași logică și pentru dietaryRestrictions.' : ''}'
+        '$userPrefsBlock';
   }
 
   String _buildPantryContext(List<FoodItem> pantryItems) {
@@ -66,10 +195,11 @@ class GroqService {
     List<FoodItem> pantryItems, {
     UserProfile? profile,
     ExtractedPreferences? prefs,
+    UserPreferences? userPrefs,
   }) async {
     final pantryContext = _buildPantryContext(pantryItems);
     final systemWithContext = '$_systemPromptBase\n\n'
-        '${profile != null ? "${_buildProfileContext(profile, prefs)}\n\n" : ""}'
+        '${profile != null ? "${_buildProfileContext(profile, prefs, userPrefs)}\n\n" : ""}'
         'Pantry utilizator:\n$pantryContext';
 
     final recent =
@@ -124,6 +254,7 @@ class GroqService {
     List<FoodItem> pantryItems, {
     UserProfile? profile,
     ExtractedPreferences? prefs,
+    UserPreferences? userPrefs,
   }) async {
     final emptyPantry = pantryItems.isEmpty;
     final expiringSoon = pantryItems
@@ -214,6 +345,20 @@ class GroqService {
         ? 'Preferința utilizatorului pentru această săptămână: "$craving".\n'
         : '';
 
+    final allRecipes = await _loadRecipes();
+    final expiringIngredients = pantryItems
+        .where((i) => i.daysUntilExpiry < 3)
+        .map((i) => i.name.toLowerCase())
+        .toList();
+    final filtered = _filterRecipes(
+      allRecipes,
+      pantryItems,
+      prefs,
+      expiringIngredients: expiringIngredients,
+      craving: craving,
+    );
+    final recipeContext = _buildRecipeContext(filtered);
+
     final prompt =
         'Ești Frigo AI. Creează un plan de mese pentru $days zile cu $mealsPerDay mese/zi.\n'
         '$cravingNote'
@@ -223,7 +368,7 @@ class GroqService {
         '- 3 mese/zi: Masa 1 = mic dejun simplu (ouă, iaurt, pâine), Masa 2 = prânz, Masa 3 = cină\n'
         'Prioritizează ingredientele din pantry care expiră cel mai curând.\n'
         'Respectă preferințele și restricțiile utilizatorului.\n'
-        'Sugerează DOAR rețete românești sau mediteraneene tradiționale, complete și coerente culinar.\n'
+        'Alege EXCLUSIV rețetele din lista furnizată mai jos. Nu inventa rețete care nu se află în acea listă.\n'
         'REGULI OBLIGATORII pentru fiecare masă:\n'
         '- Fiecare masă trebuie să fie o rețetă completă cu minim 2-3 ingrediente compatibile.\n'
         '- Nu combina ingrediente incompatibile într-o singură masă (ex: couscous cu lapte, cartofi prăjiți singuri ca masă principală, paste cu brânză telemea și maioneză).\n'
@@ -234,6 +379,7 @@ class GroqService {
         '- Nu repeta același ingredient principal în mai mult de 3 mese din același plan.\n'
         '- Condimentele de bază (ulei, sare, piper, oțet) NU se trec în ingredients_missing — se consideră că utilizatorul le are mereu.\n'
         '- Masa de prânz trebuie să fie consistentă (fel principal cu proteină sau supă/ciorbă completă). Masa de seară poate fi mai ușoară dar trebuie să fie o masă reală, nu o gustare.\n'
+        '- Nu repeta aceeași rețetă în două zile diferite ale săptămânii. Fiecare zi trebuie să aibă rețete unice față de celelalte zile.\n'
         'Răspunde DOAR cu JSON valid, fără text explicativ, fără markdown, fără backticks.\n'
         'Zilele planului: ${selectedDays.join(", ")}.\n'
         'Format exact:\n'
@@ -241,6 +387,7 @@ class GroqService {
         'Fiecare zi trebuie să aibă exact $mealsPerDay mese.';
 
     final systemWithContext = '$prompt\n\n'
+        '$recipeContext\n'
         '${profile != null ? "${_buildProfileContext(profile, prefs)}\n\n" : ""}'
         'Pantry utilizator:\n$pantryContext';
 
@@ -252,7 +399,7 @@ class GroqService {
       },
     ];
 
-    return _callApi(messages, maxTokens: 1500);
+    return _callApi(messages, maxTokens: 2000);
   }
 
   Future<String> _callApi(

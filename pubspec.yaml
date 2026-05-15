@@ -44,3 +44,4 @@ flutter:
   assets:
     - assets/logo_frigo.png
     - assets/logo+name.png
+    - assets/data/

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/providers/auth_provider.dart';
@@ -216,6 +217,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onToggle: (key, val) => ref
                       .read(_editProvider.notifier)
                       .toggleNotification(key, val),
+                ),
+                const SizedBox(height: 16),
+                _PreferencesCard(
+                  onTap: () => context.push('/preferences'),
                 ),
                 const SizedBox(height: 24),
                 _LogoutButton(
@@ -706,6 +711,45 @@ class _SectionCard extends StatelessWidget {
           const SizedBox(height: 16),
           child,
         ],
+      ),
+    );
+  }
+}
+
+// ─── Preferences card ────────────────────────────────────────────────────────
+
+class _PreferencesCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _PreferencesCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        leading: const Icon(Icons.tune_outlined, color: AppColors.primary),
+        title: const Text(
+          'Preferințe alimentare',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: const Text(
+          'Alergii, restricții, ingrediente evitate',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        onTap: onTap,
       ),
     );
   }

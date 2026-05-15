@@ -44,6 +44,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  void _confirmNewConversation() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Conversație nouă'),
+        content: const Text(
+            'Începi o conversație nouă? Istoricul va rămâne salvat.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(chatProvider.notifier).clearConversation();
+              ref.read(chatProvider.notifier).initialize(forceNew: true);
+            },
+            child: const Text('Conversație nouă'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _send({String? text}) async {
     final msg = text ?? _controller.text.trim();
     if (msg.isEmpty) return;
@@ -132,10 +161,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             IconButton(
               icon: const Icon(Icons.edit_note, color: Colors.white),
               tooltip: 'Conversație nouă',
-              onPressed: () {
-                ref.read(chatProvider.notifier).clearConversation();
-                ref.read(chatProvider.notifier).initialize();
-              },
+              onPressed: () => _confirmNewConversation(),
             ),
           const Padding(
             padding: EdgeInsets.only(right: 4),

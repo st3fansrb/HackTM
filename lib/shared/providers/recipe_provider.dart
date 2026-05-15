@@ -12,3 +12,5 @@ final recipeProvider = StreamProvider<List<Recipe>>((ref) {
   if (user == null) return const Stream.empty();
   return ref.watch(recipeRepositoryProvider).watchRecipes(user.uid);
 });
+
+final selectedRecipesTabProvider = StateProvider<int>((_) => 0);

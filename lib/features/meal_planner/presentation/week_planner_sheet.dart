@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../shared/providers/recipe_provider.dart';
 import '../../../features/shopping_list/data/shopping_list_repository.dart';
 import '../../../features/shopping_list/domain/shopping_item.dart';
 import '../../../shared/providers/pantry_provider.dart';
@@ -25,6 +28,7 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
   int _mealsPerDay = 2;
   final _cravingController = TextEditingController();
   bool _isLoading = false;
+  bool _planSaved = false;
   Map<String, dynamic>? _plan;
   String? _error;
   bool _addingToList = false;
@@ -72,8 +76,10 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
       );
       final parsed = jsonDecode(raw.trim()) as Map<String, dynamic>;
       if (parsed['plan'] == null) throw Exception('Missing plan key');
+      await _savePlanToFirestore(parsed['plan'] as List);
       setState(() {
         _plan = parsed;
+        _planSaved = true;
         _isLoading = false;
       });
     } catch (_) {
@@ -84,28 +90,111 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
     }
   }
 
+  Future<void> _savePlanToFirestore(List planList) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final now = DateTime.now();
+    final thursday = now.add(Duration(days: 4 - now.weekday));
+    final firstDayOfYear = DateTime(thursday.year, 1, 1);
+    final weekNum =
+        ((thursday.difference(firstDayOfYear).inDays) / 7).floor() + 1;
+    final weekId =
+        'week_${thursday.year}_${weekNum.toString().padLeft(2, '0')}';
+    try {
+      await FirebaseFirestore.instance
+          .doc('users/${user.uid}/weekly_plans/$weekId')
+          .set({
+        'generatedAt': FieldValue.serverTimestamp(),
+        'weekId': weekId,
+        'days': planList,
+      });
+    } catch (_) {}
+  }
+
   Future<void> _addMissingToList() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     setState(() => _addingToList = true);
+
+    // Încarcă baza de rețete pentru gramaje
+    final Map<String, Map<String, dynamic>?> recipeQuantities = {};
+    try {
+      final raw =
+          await rootBundle.loadString('assets/data/recipes_database.json');
+      final db = jsonDecode(raw) as Map<String, dynamic>;
+      for (final category in db.values) {
+        if (category is List) {
+          for (final recipe in category.cast<Map<String, dynamic>>()) {
+            final name = (recipe['name'] as String? ?? '').toLowerCase();
+            recipeQuantities[name] =
+                recipe['quantity_per_serving'] as Map<String, dynamic>?;
+          }
+        }
+      }
+    } catch (_) {}
+
     final repo = ShoppingListRepository();
-    final days =
-        (_plan!['plan'] as List).cast<Map<String, dynamic>>();
-    final missing = <String>{};
+    final days = (_plan!['plan'] as List).cast<Map<String, dynamic>>();
+    // ingredient → (quantity, unit)
+    final Map<String, (double?, String?)> missingMap = {};
+
     for (final day in days) {
       for (final meal
           in (day['meals'] as List).cast<Map<String, dynamic>>()) {
-        final m = meal['ingredients_missing'];
-        if (m is List) missing.addAll(m.cast<String>());
+        final mealName = (meal['name'] as String? ?? '').toLowerCase();
+        final missing = meal['ingredients_missing'];
+        if (missing is! List) continue;
+
+        // caută gramajele pentru rețeta curentă
+        Map<String, dynamic>? qtyMap;
+        try {
+          if (recipeQuantities.containsKey(mealName)) {
+            qtyMap = recipeQuantities[mealName];
+          } else {
+            for (final entry in recipeQuantities.entries) {
+              if (entry.key.contains(mealName) ||
+                  mealName.contains(entry.key)) {
+                qtyMap = entry.value;
+                break;
+              }
+            }
+          }
+        } catch (_) {}
+
+        for (final ing in missing.cast<String>()) {
+          final name = ing.trim();
+          if (missingMap.containsKey(name)) continue;
+
+          double? qty;
+          String? unit;
+          if (qtyMap != null) {
+            try {
+              final ingLower = name.toLowerCase();
+              for (final qEntry in qtyMap.entries) {
+                if (qEntry.key.toLowerCase().contains(ingLower) ||
+                    ingLower.contains(qEntry.key.toLowerCase())) {
+                  final parsed = _parseQuantity(qEntry.value.toString());
+                  qty = parsed.$1;
+                  unit = parsed.$2;
+                  break;
+                }
+              }
+            } catch (_) {}
+          }
+          missingMap[name] = (qty, unit);
+        }
       }
     }
-    for (final name in missing) {
+
+    for (final entry in missingMap.entries) {
       try {
         await repo.addItem(
           user.uid,
           ShoppingItem(
             id: '',
-            name: name.trim(),
+            name: entry.key,
+            quantity: entry.value.$1,
+            unit: entry.value.$2,
             checked: false,
             source: 'meal_plan',
             addedAt: DateTime.now(),
@@ -113,7 +202,21 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
         );
       } catch (_) {}
     }
-    if (mounted) Navigator.of(context).pop();
+
+    if (mounted) {
+      setState(() => _addingToList = false);
+      Navigator.of(context).pop();
+    }
+  }
+
+  (double?, String?) _parseQuantity(String raw) {
+    final match =
+        RegExp(r'^(\d+(?:\.\d+)?)\s*(.*)$').firstMatch(raw.trim());
+    if (match == null) return (null, null);
+    final qty = double.tryParse(match.group(1)!);
+    var unitStr = match.group(2)?.trim() ?? '';
+    if (unitStr == 'bucăți' || unitStr == 'bucată') unitStr = 'buc';
+    return (qty, unitStr.isEmpty ? null : unitStr);
   }
 
   @override
@@ -128,9 +231,95 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
       ),
       child: _isLoading
           ? _buildLoading()
-          : _plan != null
-              ? _buildResults()
-              : _buildForm(),
+          : _planSaved
+              ? _buildSuccess()
+              : _plan != null
+                  ? _buildResults()
+                  : _buildForm(),
+    );
+  }
+
+  Widget _buildSuccess() {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        32,
+        40,
+        32,
+        40 + MediaQuery.of(context).viewPadding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: AppColors.darkEmerald,
+            size: 72,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Planul a fost generat!',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: AppColors.text,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Planul pentru $_days ${_days == 1 ? 'zi' : 'zile'} a fost salvat.',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Închide',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_month),
+                  label: const Text(
+                    'Vezi planul',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkEmerald,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    ref.read(selectedRecipesTabProvider.notifier).state = 1;
+                    Navigator.of(context).pop();
+                    context.go('/recipes');
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

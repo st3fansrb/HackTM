@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../features/meal_planner/presentation/meal_plan_screen.dart';
 import '../../../features/pantry/domain/food_item.dart';
 import '../../../shared/providers/pantry_provider.dart';
 import '../../../shared/providers/profile_provider.dart';
@@ -36,268 +37,30 @@ class RecipesScreen extends ConsumerStatefulWidget {
   ConsumerState<RecipesScreen> createState() => _RecipesScreenState();
 }
 
-class _RecipesScreenState extends ConsumerState<RecipesScreen> {
-  bool _seeded = false;
-  final _searchController = TextEditingController();
+class _RecipesScreenState extends ConsumerState<RecipesScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialTab = ref.read(selectedRecipesTabProvider);
+    _tabController =
+        TabController(length: 2, vsync: this, initialIndex: initialTab);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) setState(() {});
+    });
+  }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _autoSeed(List<Recipe> recipes) async {
-    if (_seeded || recipes.isNotEmpty) return;
-    _seeded = true;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final repo = ref.read(recipeRepositoryProvider);
-    for (final recipe in kDemoRecipes) {
-      try {
-        await repo.addRecipe(uid, recipe);
-      } catch (_) {}
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final recipesAsync = ref.watch(recipeProvider);
-    final pantry = ref.watch(pantryProvider).valueOrNull ?? [];
-    final filter = ref.watch(_recipeFilterProvider);
-    final profile = ref.watch(profileProvider).valueOrNull;
-    final searchText = ref.watch(_searchProvider);
-    final editMode = ref.watch(_editModeProvider);
-    final selectedIds = ref.watch(_selectedIdsProvider);
-
-    ref.listen<AsyncValue<List<Recipe>>>(recipeProvider, (_, next) {
-      next.whenData(_autoSeed);
-    });
-
-    final subtitleText = recipesAsync.maybeWhen(
-      data: (list) => '${list.length} rețete salvate',
-      orElse: () => 'Se încarcă...',
-    );
-
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [AppColors.darkTeal, AppColors.darkEmerald],
-            ),
-          ),
-        ),
-        foregroundColor: Colors.white,
-        title: editMode
-            ? Text(
-                '${selectedIds.length} selectate',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: Colors.white,
-                ),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    '🍽️ Rețete',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    subtitleText,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-        actions: editMode
-            ? [
-                if (selectedIds.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.white),
-                    tooltip: 'Șterge selectate',
-                    onPressed: () => _confirmBulkDelete(context, selectedIds),
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  tooltip: 'Ieși din editare',
-                  onPressed: _exitEditMode,
-                ),
-              ]
-            : [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                  tooltip: 'Mod editare',
-                  onPressed: () =>
-                      ref.read(_editModeProvider.notifier).state = true,
-                ),
-              ],
-      ),
-      body: recipesAsync.when(
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.wifi_off_outlined,
-                  size: 48, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text('Nu s-au putut încărca rețetele',
-                  style: Theme.of(context).textTheme.bodyLarge),
-            ],
-          ),
-        ),
-        data: (recipes) {
-          var filtered = switch (filter) {
-            0 => recipes,
-            1 => recipes.where((r) => r.isFavorite).toList(),
-            2 => recipes.where((r) => _canCookToday(r, pantry)).toList(),
-            3 => recipes.where((r) => r.source == 'ai').toList(),
-            _ => recipes,
-          };
-
-          bool profileFilterActive = false;
-          if (profile != null) {
-            final diet = profile.dietType.toLowerCase();
-            if (diet == 'vegetarian' || diet == 'vegan') {
-              profileFilterActive = true;
-              filtered = filtered.where((r) {
-                final tags = r.dietaryTags.map((t) => t.toLowerCase());
-                return !tags
-                    .any((t) => t.contains('carne') || t.contains('peste'));
-              }).toList();
-            }
-            final hasGluten =
-                profile.allergies.any((a) => a.toLowerCase() == 'gluten');
-            if (hasGluten) {
-              profileFilterActive = true;
-              filtered = filtered.where((r) {
-                final tags = r.dietaryTags.map((t) => t.toLowerCase());
-                return tags.any((t) =>
-                    t.contains('fara_gluten') || t.contains('fără gluten'));
-              }).toList();
-            }
-          }
-
-          if (searchText.isNotEmpty) {
-            final q = searchText.toLowerCase();
-            filtered =
-                filtered.where((r) => r.name.toLowerCase().contains(q)).toList();
-          }
-
-          return Column(
-            children: [
-              _FilterRow(selected: filter, ref: ref),
-              if (!editMode)
-                _SearchField(
-                  controller: _searchController,
-                  ref: ref,
-                  searchText: searchText,
-                ),
-              if (profileFilterActive && profile != null)
-                _ProfileFilterBanner(dietType: profile.dietType),
-              if (filtered.isEmpty)
-                const Expanded(child: _EmptyState())
-              else
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: filtered.length,
-                    itemBuilder: (ctx, i) {
-                      final recipe = filtered[i];
-                      final isSelected = selectedIds.contains(recipe.id);
-                      return Dismissible(
-                        key: ValueKey(recipe.id),
-                        direction: editMode
-                            ? DismissDirection.none
-                            : DismissDirection.endToStart,
-                        background: const SizedBox.shrink(),
-                        secondaryBackground: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.expiredRed,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          child: const Icon(Icons.delete_outline,
-                              color: Colors.white, size: 28),
-                        ),
-                        onDismissed: (_) => _swipeDelete(ctx, recipe),
-                        child: RecipeCard(
-                          recipe: recipe,
-                          isEditMode: editMode,
-                          isSelected: isSelected,
-                          onToggleSelect: () => _toggleSelect(recipe.id),
-                          onCook: () => ctx.push('/recipes/${recipe.id}'),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _toggleSelect(String id) {
-    final current = Set<String>.from(ref.read(_selectedIdsProvider));
-    if (current.contains(id)) {
-      current.remove(id);
-    } else {
-      current.add(id);
-    }
-    ref.read(_selectedIdsProvider.notifier).state = current;
   }
 
   void _exitEditMode() {
     ref.read(_editModeProvider.notifier).state = false;
     ref.read(_selectedIdsProvider.notifier).state = {};
-  }
-
-  Future<void> _swipeDelete(BuildContext context, Recipe recipe) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final repo = ref.read(recipeRepositoryProvider);
-    try {
-      await repo.deleteRecipe(uid, recipe.id);
-    } catch (_) {}
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Rețetă ștearsă'),
-        backgroundColor: AppColors.darkTeal,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        action: SnackBarAction(
-          label: 'Anulează',
-          textColor: AppColors.fawn,
-          onPressed: () async {
-            try {
-              await repo.addRecipe(uid, recipe);
-            } catch (_) {}
-          },
-        ),
-      ),
-    );
   }
 
   Future<void> _confirmBulkDelete(
@@ -331,6 +94,324 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
       } catch (_) {}
     }
     _exitEditMode();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recipesAsync = ref.watch(recipeProvider);
+    final editMode = ref.watch(_editModeProvider);
+    final selectedIds = ref.watch(_selectedIdsProvider);
+    final currentTab = _tabController.index;
+
+    ref.listen<int>(selectedRecipesTabProvider, (_, next) {
+      if (_tabController.index != next) _tabController.animateTo(next);
+    });
+
+    final subtitleText = recipesAsync.maybeWhen(
+      data: (list) => '${list.length} rețete salvate',
+      orElse: () => 'Se încarcă...',
+    );
+
+    final Widget titleWidget;
+    if (editMode && currentTab == 0) {
+      titleWidget = Text(
+        '${selectedIds.length} selectate',
+        style: const TextStyle(
+            fontWeight: FontWeight.w700, fontSize: 18, color: Colors.white),
+      );
+    } else if (currentTab == 0) {
+      titleWidget = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🍽️ Rețete',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: Colors.white)),
+          Text(subtitleText,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w400)),
+        ],
+      );
+    } else {
+      titleWidget = const Text('📅 Planul săptămânii',
+          style: TextStyle(
+              fontWeight: FontWeight.w700, fontSize: 18, color: Colors.white));
+    }
+
+    final List<Widget> appBarActions;
+    if (editMode && currentTab == 0) {
+      appBarActions = [
+        if (selectedIds.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            tooltip: 'Șterge selectate',
+            onPressed: () => _confirmBulkDelete(context, selectedIds),
+          ),
+        IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          tooltip: 'Ieși din editare',
+          onPressed: _exitEditMode,
+        ),
+      ];
+    } else if (currentTab == 0) {
+      appBarActions = [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined, color: Colors.white),
+          tooltip: 'Mod editare',
+          onPressed: () =>
+              ref.read(_editModeProvider.notifier).state = true,
+        ),
+      ];
+    } else {
+      appBarActions = [];
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [AppColors.darkTeal, AppColors.darkEmerald],
+            ),
+          ),
+        ),
+        foregroundColor: Colors.white,
+        title: titleWidget,
+        actions: appBarActions,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: AppColors.surface,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: AppColors.darkEmerald,
+              labelColor: AppColors.darkEmerald,
+              unselectedLabelColor: Colors.grey,
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.menu_book_outlined),
+                  text: 'Rețete',
+                ),
+                Tab(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  text: 'Plan',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _RecipesTab(),
+          MealPlanContent(),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Recipes Tab ──────────────────────────────────────────────────────────────
+
+class _RecipesTab extends ConsumerStatefulWidget {
+  const _RecipesTab();
+
+  @override
+  ConsumerState<_RecipesTab> createState() => _RecipesTabState();
+}
+
+class _RecipesTabState extends ConsumerState<_RecipesTab> {
+  bool _seeded = false;
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _autoSeed(List<Recipe> recipes) async {
+    if (_seeded || recipes.isNotEmpty) return;
+    _seeded = true;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final repo = ref.read(recipeRepositoryProvider);
+    for (final recipe in kDemoRecipes) {
+      try {
+        await repo.addRecipe(uid, recipe);
+      } catch (_) {}
+    }
+  }
+
+  void _toggleSelect(String id) {
+    final current = Set<String>.from(ref.read(_selectedIdsProvider));
+    if (current.contains(id)) {
+      current.remove(id);
+    } else {
+      current.add(id);
+    }
+    ref.read(_selectedIdsProvider.notifier).state = current;
+  }
+
+  Future<void> _swipeDelete(BuildContext context, Recipe recipe) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final repo = ref.read(recipeRepositoryProvider);
+    try {
+      await repo.deleteRecipe(uid, recipe.id);
+    } catch (_) {}
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Rețetă ștearsă'),
+        backgroundColor: AppColors.darkTeal,
+        behavior: SnackBarBehavior.floating,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        action: SnackBarAction(
+          label: 'Anulează',
+          textColor: AppColors.fawn,
+          onPressed: () async {
+            try {
+              await repo.addRecipe(uid, recipe);
+            } catch (_) {}
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recipesAsync = ref.watch(recipeProvider);
+    final pantry = ref.watch(pantryProvider).valueOrNull ?? [];
+    final filter = ref.watch(_recipeFilterProvider);
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final searchText = ref.watch(_searchProvider);
+    final editMode = ref.watch(_editModeProvider);
+    final selectedIds = ref.watch(_selectedIdsProvider);
+
+    ref.listen<AsyncValue<List<Recipe>>>(recipeProvider, (_, next) {
+      next.whenData(_autoSeed);
+    });
+
+    return recipesAsync.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary)),
+      error: (e, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_outlined,
+                size: 48, color: AppColors.textMuted),
+            const SizedBox(height: 12),
+            Text('Nu s-au putut încărca rețetele',
+                style: Theme.of(context).textTheme.bodyLarge),
+          ],
+        ),
+      ),
+      data: (recipes) {
+        var filtered = switch (filter) {
+          0 => recipes,
+          1 => recipes.where((r) => r.isFavorite).toList(),
+          2 => recipes.where((r) => _canCookToday(r, pantry)).toList(),
+          3 => recipes.where((r) => r.source == 'ai').toList(),
+          _ => recipes,
+        };
+
+        bool profileFilterActive = false;
+        if (profile != null) {
+          final diet = profile.dietType.toLowerCase();
+          if (diet == 'vegetarian' || diet == 'vegan') {
+            profileFilterActive = true;
+            filtered = filtered.where((r) {
+              final tags = r.dietaryTags.map((t) => t.toLowerCase());
+              return !tags
+                  .any((t) => t.contains('carne') || t.contains('peste'));
+            }).toList();
+          }
+          final hasGluten =
+              profile.allergies.any((a) => a.toLowerCase() == 'gluten');
+          if (hasGluten) {
+            profileFilterActive = true;
+            filtered = filtered.where((r) {
+              final tags = r.dietaryTags.map((t) => t.toLowerCase());
+              return tags.any((t) =>
+                  t.contains('fara_gluten') || t.contains('fără gluten'));
+            }).toList();
+          }
+        }
+
+        if (searchText.isNotEmpty) {
+          final q = searchText.toLowerCase();
+          filtered =
+              filtered.where((r) => r.name.toLowerCase().contains(q)).toList();
+        }
+
+        return Column(
+          children: [
+            _FilterRow(selected: filter, ref: ref),
+            if (!editMode)
+              _SearchField(
+                controller: _searchController,
+                ref: ref,
+                searchText: searchText,
+              ),
+            if (profileFilterActive && profile != null)
+              _ProfileFilterBanner(dietType: profile.dietType),
+            if (filtered.isEmpty)
+              const Expanded(child: _EmptyState())
+            else
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  itemCount: filtered.length,
+                  itemBuilder: (ctx, i) {
+                    final recipe = filtered[i];
+                    final isSelected = selectedIds.contains(recipe.id);
+                    return Dismissible(
+                      key: ValueKey(recipe.id),
+                      direction: editMode
+                          ? DismissDirection.none
+                          : DismissDirection.endToStart,
+                      background: const SizedBox.shrink(),
+                      secondaryBackground: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.expiredRed,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete_outline,
+                            color: Colors.white, size: 28),
+                      ),
+                      onDismissed: (_) => _swipeDelete(ctx, recipe),
+                      child: RecipeCard(
+                        recipe: recipe,
+                        isEditMode: editMode,
+                        isSelected: isSelected,
+                        onToggleSelect: () => _toggleSelect(recipe.id),
+                        onCook: () => ctx.push('/recipes/${recipe.id}'),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 

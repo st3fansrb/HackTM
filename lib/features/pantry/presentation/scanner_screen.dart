@@ -1,15 +1,10 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/services/barcode_service.dart';
 import '../../../features/products/data/product_resolution_service.dart';
-import 'qr_view_factory.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
@@ -19,37 +14,41 @@ class ScannerScreen extends ConsumerStatefulWidget {
 }
 
 class _ScannerScreenState extends ConsumerState<ScannerScreen> {
-  late final BarcodeService _service;
-  StreamSubscription<String>? _sub;
-  bool _isScanning = false;
+  final _controller = MobileScannerController(
+    formats: const [BarcodeFormat.ean13, BarcodeFormat.ean8],
+  );
   bool _navigated = false;
   bool _resolving = false;
+  bool _torchOn = false;
+  String? _lastBarcode;
+  int _sameCount = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    registerQrViewFactory();
-    _service = BarcodeService();
-    _sub = _service.barcodeStream.listen(_onBarcode);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startScanning());
-  }
-
-  void _startScanning() {
-    if (!mounted || _isScanning || _resolving) return;
-    _navigated = false;
-    _service.startScanner();
-    setState(() => _isScanning = true);
-  }
-
-  void _stopScanning() {
-    _service.stopScanner();
-    if (mounted) setState(() => _isScanning = false);
+  void _onDetect(BarcodeCapture capture) {
+    final barcode = capture.barcodes.firstOrNull?.rawValue;
+    if (barcode == null || _navigated || !mounted || _resolving) return;
+    if (barcode == _lastBarcode) {
+      _sameCount++;
+      if (_sameCount >= 2) _onBarcode(barcode);
+    } else {
+      _lastBarcode = barcode;
+      _sameCount = 1;
+    }
   }
 
   Future<void> _onBarcode(String barcode) async {
     if (_navigated || !mounted || _resolving) return;
     _navigated = true;
-    _stopScanning();
+    await _controller.stop();
+
+    // TEMP DIAGNOSTIC — remove after barcode debug
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('RAW barcode: "$barcode" (len ${barcode.length})'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
 
     setState(() => _resolving = true);
     try {
@@ -68,11 +67,14 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     }
   }
 
+  void _toggleTorch() {
+    _controller.toggleTorch();
+    setState(() => _torchOn = !_torchOn);
+  }
+
   @override
   void dispose() {
-    _sub?.cancel();
-    _service.stopScanner();
-    _service.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -87,6 +89,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         title: const Text('Scanner Barcode'),
         actions: [
           IconButton(
+            icon: Icon(
+              _torchOn ? Icons.flashlight_on : Icons.flashlight_off,
+            ),
+            tooltip: 'Lanternă',
+            onPressed: _toggleTorch,
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Caută după nume',
             onPressed: () => context.push('/pantry/search'),
@@ -96,81 +105,24 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          if (kIsWeb)
-            const HtmlElementView(viewType: 'qr-reader-view')
-          else
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Scanner disponibil doar în browser (PWA)',
-                  style: TextStyle(color: Colors.white54, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+          ),
 
           if (_resolving)
             Container(
               color: Colors.black54,
-              child: Column(
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(color: Colors.white),
-                  const SizedBox(height: 20),
-                  const Text(
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 20),
+                  Text(
                     'Caut produsul…',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ],
-              ),
-            )
-          else if (!_isScanning)
-            Container(
-              color: Colors.black87,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.qr_code_scanner,
-                        size: 80, color: Colors.white38),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Scanner oprit',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Apasă butonul pentru a scana din nou',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      onPressed: _startScanning,
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Pornește scanner'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 28, vertical: 14),
-                        textStyle: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => context.push('/pantry/search'),
-                      child: const Text(
-                        'Caută după nume →',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             )
           else

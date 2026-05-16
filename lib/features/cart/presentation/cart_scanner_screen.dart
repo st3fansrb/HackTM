@@ -1,16 +1,13 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/services/barcode_service.dart';
 import '../../../features/nutrition/presentation/nutri_score_badge.dart';
-import '../../../features/pantry/presentation/qr_view_factory.dart';
 import '../../../features/products/data/gemini_ocr_service.dart';
 import '../../../features/products/data/image_picker_service.dart';
 import '../../../features/products/data/product_repository.dart';
@@ -33,6 +30,16 @@ const _cartCategories = [
 
 const _units = ['buc', 'kg', 'g', 'L', 'ml'];
 
+// Maps GeminiOcrService category tokens to cart category ids.
+const _ocrCategoryToCart = {
+  'dairy': 'dairy',
+  'meat': 'meat',
+  'vegetables': 'produce',
+  'fruits': 'produce',
+  'grains': 'grains',
+  'other': 'other',
+};
+
 enum _SheetPhase { loading, knownProduct, choice, ocrLoading, form }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -45,48 +52,42 @@ class CartScannerScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScannerScreenState extends ConsumerState<CartScannerScreen> {
-  late final BarcodeService _service;
-  StreamSubscription<String>? _sub;
-  bool _isScanning = false;
-  bool _navigated = false;
+  final _controller = MobileScannerController(
+    formats: const [BarcodeFormat.ean13, BarcodeFormat.ean8],
+  );
+  bool _scanning = true;
   bool _torchOn = false;
-
-  @override
-  void initState() {
-    super.initState();
-    registerQrViewFactory();
-    _service = BarcodeService();
-    _sub = _service.barcodeStream.listen(_onBarcode);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startScanning());
-  }
-
-  void _startScanning() {
-    if (!mounted || _isScanning) return;
-    _navigated = false;
-    _service.startScanner();
-    setState(() => _isScanning = true);
-  }
-
-  void _stopScanning() {
-    _service.stopScanner();
-    if (mounted) setState(() => _isScanning = false);
-  }
-
-  void _resumeScanning() {
-    _navigated = false;
-    _startScanning();
-  }
+  String? _lastBarcode;
+  int _sameCount = 0;
 
   void _toggleTorch() {
-    _service.toggleTorch();
+    _controller.toggleTorch();
     setState(() => _torchOn = !_torchOn);
   }
 
-  void _onBarcode(String barcode) {
-    if (_navigated || !mounted) return;
-    _navigated = true;
-    _stopScanning();
-    _showProductSheet(barcode);
+  void _onDetect(BarcodeCapture capture) {
+    final barcode = capture.barcodes.firstOrNull?.rawValue;
+    if (barcode == null || !_scanning || !mounted) return;
+    if (barcode == _lastBarcode) {
+      _sameCount++;
+      if (_sameCount >= 2) _onBarcode(barcode);
+    } else {
+      _lastBarcode = barcode;
+      _sameCount = 1;
+    }
+  }
+
+  Future<void> _onBarcode(String barcode) async {
+    if (!_scanning || !mounted) return;
+    _scanning = false;
+    await _controller.stop();
+    await _showProductSheet(barcode);
+    if (mounted) {
+      _lastBarcode = null;
+      _sameCount = 0;
+      _scanning = true;
+      await _controller.start();
+    }
   }
 
   Future<void> _showProductSheet(String barcode) async {
@@ -111,14 +112,11 @@ class _CartScannerScreenState extends ConsumerState<CartScannerScreen> {
         onCancel: () {},
       ),
     );
-    _resumeScanning();
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
-    _service.stopScanner();
-    _service.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -132,100 +130,44 @@ class _CartScannerScreenState extends ConsumerState<CartScannerScreen> {
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         title: const Text('Scanează pentru coș'),
         actions: [
-          TextButton(
-            onPressed: _toggleTorch,
-            child: Text(
-              '🔦 Lanternă',
-              style: TextStyle(
-                color: _torchOn ? Colors.yellow : Colors.white70,
-                fontWeight:
-                    _torchOn ? FontWeight.w700 : FontWeight.normal,
-              ),
+          IconButton(
+            icon: Icon(
+              _torchOn ? Icons.flashlight_on : Icons.flashlight_off,
             ),
+            tooltip: 'Lanternă',
+            onPressed: _toggleTorch,
           ),
         ],
       ),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          if (kIsWeb)
-            const HtmlElementView(viewType: 'qr-reader-view')
-          else
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Scanner disponibil doar în browser (PWA)',
-                  style: TextStyle(color: Colors.white54, fontSize: 16),
-                  textAlign: TextAlign.center,
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+          ),
+
+          const IgnorePointer(child: _ScanFrame()),
+
+          Positioned(
+            bottom: 48,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Text(
+                  'Scanează produsul cumpărat',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ),
-
-          if (_isScanning && kIsWeb)
-            const IgnorePointer(child: _ScanFrame()),
-
-          if (!_isScanning)
-            Container(
-              color: Colors.black87,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.shopping_cart_outlined,
-                        size: 80, color: Colors.white38),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Scanner oprit',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Apasă butonul pentru a scana din nou',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      onPressed: _startScanning,
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Pornește scanner'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 28, vertical: 14),
-                        textStyle: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          if (_isScanning)
-            Positioned(
-              bottom: 48,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Text(
-                    'Scanează produsul cumpărat',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
@@ -364,6 +306,16 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           _sugarCtrl.text = data.sugar!.toStringAsFixed(1);
         }
         if (data.salt != null) _saltCtrl.text = data.salt!.toStringAsFixed(1);
+        if (data.quantity != null && data.quantity! > 0) {
+          final q = data.quantity!;
+          _qtyCtrl.text =
+              q % 1 == 0 ? q.toStringAsFixed(0) : q.toStringAsFixed(2);
+        }
+        if (data.unit != null && _units.contains(data.unit)) {
+          _unit = data.unit!;
+        }
+        final mappedCat = _ocrCategoryToCart[data.category];
+        if (mappedCat != null) _category = mappedCat;
         setState(() => _phase = _SheetPhase.form);
       } else {
         setState(() {

@@ -24,17 +24,35 @@ class ProductResolutionService {
   final OpenFoodFactsService _off = OpenFoodFactsService();
   final _db = FirebaseFirestore.instance;
 
+  String _normalizeBarcode(String raw) {
+    // Strip whitespace and any non-digit characters.
+    final cleaned = raw.trim().replaceAll(RegExp(r'\D'), '');
+    // EAN-13: pad to 13 digits if shorter (e.g. EAN-8 / UPC-A 12).
+    if (cleaned.length < 13) return cleaned.padLeft(13, '0');
+    // EAN-13: truncate to last 13 digits if longer (scan glitch).
+    if (cleaned.length > 13) return cleaned.substring(cleaned.length - 13);
+    return cleaned;
+  }
+
   Future<ProductResolution> resolveByBarcode(String barcode) async {
     final steps = <ResolutionStep>[];
+    final normalizedBarcode = _normalizeBarcode(barcode);
+
+    // TEMP DIAGNOSTIC — remove after barcode debug
+    print('[BARCODE] Raw value from scanner: "$barcode"');
+    print('[BARCODE] Length: ${barcode.length}');
+    print('[BARCODE] Normalized: "$normalizedBarcode"');
 
     // Step 1: Open Food Facts by barcode
     steps.add(ResolutionStep.offBarcode);
-    final offProduct = await _off.fetchByBarcode(barcode);
+    final offProduct = await _off.fetchByBarcode(normalizedBarcode);
+    print('[BARCODE] OFF result: ${offProduct != null ? "found" : "null"}');
     if (offProduct != null) {
-      final prefill = offProduct.toPrefillMap()..['barcode'] = barcode;
-      await _cacheToFirestore(barcode, prefill);
+      final prefill =
+          offProduct.toPrefillMap()..['barcode'] = normalizedBarcode;
+      await _cacheToFirestore(normalizedBarcode, prefill);
       await _logEvent(
-        barcode: barcode,
+        barcode: normalizedBarcode,
         stepsTried: steps,
         resolvedAtStep: 'off_barcode',
         source: 'open_food_facts',
@@ -47,36 +65,50 @@ class ProductResolutionService {
       );
     }
 
-    // Step 2: Frigo local DB
+    // Step 2: Frigo local DB — try normalized, then leading-zero-stripped,
+    // then the original cleaned value (Firestore imports often drop the
+    // leading zero when barcodes were stored as numbers).
     steps.add(ResolutionStep.frigoDB);
     try {
-      final doc = await _db
-          .collection('products_ro')
-          .doc(barcode)
-          .get()
-          .timeout(const Duration(seconds: 3));
-      if (doc.exists) {
-        final data = Map<String, dynamic>.from(doc.data()!);
-        data['barcode'] = barcode;
-        data['source'] = 'frigo_db';
-        await _logEvent(
-          barcode: barcode,
-          stepsTried: steps,
-          resolvedAtStep: 'frigo_db',
-          source: 'frigo_db',
-          category: data['category'] as String? ?? 'altele',
-        );
-        return ProductResolution(
-          product: data,
-          stepsTried: steps,
-          resolvedAtStep: ResolutionStep.frigoDB,
-        );
+      final withoutLeadingZeros =
+          normalizedBarcode.replaceAll(RegExp(r'^0+'), '');
+      final candidates = <String>{
+        normalizedBarcode,
+        withoutLeadingZeros,
+        barcode.trim(),
+      }..removeWhere((c) => c.isEmpty);
+
+      for (final candidate in candidates) {
+        print('[BARCODE] Firestore doc ID queried: "$candidate"');
+        final doc = await _db
+            .collection('products_ro')
+            .doc(candidate)
+            .get()
+            .timeout(const Duration(seconds: 3));
+        print('[BARCODE] Firestore doc exists: ${doc.exists}');
+        if (doc.exists) {
+          final data = Map<String, dynamic>.from(doc.data()!);
+          data['barcode'] = normalizedBarcode;
+          data['source'] = 'frigo_db';
+          await _logEvent(
+            barcode: normalizedBarcode,
+            stepsTried: steps,
+            resolvedAtStep: 'frigo_db',
+            source: 'frigo_db',
+            category: data['category'] as String? ?? 'altele',
+          );
+          return ProductResolution(
+            product: data,
+            stepsTried: steps,
+            resolvedAtStep: ResolutionStep.frigoDB,
+          );
+        }
       }
     } catch (_) {}
 
     // Not found
     await _logEvent(
-      barcode: barcode,
+      barcode: normalizedBarcode,
       stepsTried: steps,
       resolvedAtStep: null,
       source: null,

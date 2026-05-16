@@ -1,6 +1,9 @@
 class NutritionalData {
   final String? name;
   final String? brand;
+  final double? quantity;
+  final String? unit;
+  final String? category;
   final double? calories;
   final double? protein;
   final double? fat;
@@ -11,6 +14,9 @@ class NutritionalData {
   const NutritionalData({
     this.name,
     this.brand,
+    this.quantity,
+    this.unit,
+    this.category,
     this.calories,
     this.protein,
     this.fat,

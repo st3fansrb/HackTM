@@ -380,10 +380,13 @@ class GroqService {
         '- Condimentele de bază (ulei, sare, piper, oțet) NU se trec în ingredients_missing — se consideră că utilizatorul le are mereu.\n'
         '- Masa de prânz trebuie să fie consistentă (fel principal cu proteină sau supă/ciorbă completă). Masa de seară poate fi mai ușoară dar trebuie să fie o masă reală, nu o gustare.\n'
         '- Nu repeta aceeași rețetă în două zile diferite ale săptămânii. Fiecare zi trebuie să aibă rețete unice față de celelalte zile.\n'
+        "Pentru fiecare rețetă, câmpul 'instructions' este OBLIGATORIU și trebuie "
+        'să conțină minim 3 pași detaliați de preparare, scrisi în română, '
+        'separați prin newline. Nu lăsa instructions gol sau null niciodată.\n'
         'Răspunde DOAR cu JSON valid, fără text explicativ, fără markdown, fără backticks.\n'
         'Zilele planului: ${selectedDays.join(", ")}.\n'
         'Format exact:\n'
-        '{"plan":[{"day":"Luni","meals":[{"name":"Rețetă","ingredients_available":["ing1"],"ingredients_missing":["ing2"]}]}]}\n'
+        '{"plan":[{"day":"Luni","meals":[{"name":"Rețetă","ingredients_available":["ing1"],"ingredients_missing":["ing2"],"instructions":"1. Primul pas detaliat.\\n2. Al doilea pas detaliat.\\n3. Al treilea pas detaliat."}]}]}\n'
         'Fiecare zi trebuie să aibă exact $mealsPerDay mese.';
 
     final systemWithContext = '$prompt\n\n'
@@ -400,6 +403,74 @@ class GroqService {
     ];
 
     return _callApi(messages, maxTokens: 2000);
+  }
+
+  Future<String> regenerateSingleMeal(
+    List<FoodItem> pantryItems, {
+    required String dayName,
+    required List<String> existingRecipeNames,
+    UserProfile? profile,
+    ExtractedPreferences? prefs,
+  }) async {
+    final pantryContext = _buildPantryContext(pantryItems);
+    final existing = existingRecipeNames.isEmpty
+        ? '(niciuna)'
+        : existingRecipeNames.map((n) => '- $n').join('\n');
+
+    final prompt =
+        'Ești Frigo AI. Sugerează O SINGURĂ rețetă nouă pentru ziua $dayName.\n'
+        'Rețeta trebuie să fie DIFERITĂ de cele din lista de mai jos (nu repeta '
+        'niciuna dintre ele):\n'
+        '$existing\n'
+        'Prioritizează ingredientele din pantry care expiră cel mai curând.\n'
+        'Respectă preferințele și restricțiile utilizatorului.\n'
+        'Rețeta trebuie să aibă sens culinar: proteină + garnitură, supă/ciorbă '
+        'completă, sau fel unic tradițional. Minim 3 ingrediente compatibile.\n'
+        'Condimentele de bază (ulei, sare, piper, oțet) se consideră deja '
+        'deținute — nu le adăuga în ingrediente.\n'
+        "Câmpul 'instructions' este OBLIGATORIU și trebuie să conțină minim 3 "
+        'pași detaliați de preparare, scrisi în română, separați prin newline. '
+        'Nu lăsa instructions gol sau null niciodată.\n'
+        'Răspunde DOAR cu JSON valid, fără text explicativ, fără markdown, fără backticks.\n'
+        'Format exact:\n'
+        '{"name":"Nume rețetă","ingredients":[{"name":"ingredient","quantity":200,"unit":"g"}],'
+        '"instructions":"1. Primul pas detaliat.\\n2. Al doilea pas detaliat.\\n3. Al treilea pas detaliat."}';
+
+    final systemWithContext = '$prompt\n\n'
+        '${profile != null ? "${_buildProfileContext(profile, prefs)}\n\n" : ""}'
+        'Pantry utilizator:\n$pantryContext';
+
+    final messages = [
+      {'role': 'system', 'content': systemWithContext},
+      {
+        'role': 'user',
+        'content': 'Generează o rețetă nouă pentru ziua $dayName.',
+      },
+    ];
+
+    return _callApi(messages, maxTokens: 800);
+  }
+
+  Future<String> generateInstructions(
+    String recipeName,
+    List<String> ingredients,
+  ) async {
+    final messages = [
+      {
+        'role': 'system',
+        'content':
+            'Ești Frigo AI. Răspunde DOAR cu pașii ceruți, numerotați, în română. '
+            'Fără introducere, fără concluzie, fără markdown.',
+      },
+      {
+        'role': 'user',
+        'content':
+            'Scrie 4-5 pași detaliați de preparare pentru rețeta "$recipeName" '
+            'cu ingredientele: ${ingredients.join(', ')}. Răspunde doar cu pașii, '
+            'numerotați, în română.',
+      },
+    ];
+    return _callApi(messages, maxTokens: 500);
   }
 
   Future<String> _callApi(

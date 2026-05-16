@@ -14,7 +14,9 @@ import '../../features/auth/presentation/preferences_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 import '../../features/cart/presentation/cart_scanner_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
+import '../../features/meal_planner/domain/weekly_plan.dart';
 import '../../features/meal_planner/presentation/chat_screen.dart';
+import '../../features/meal_planner/presentation/meal_recipe_detail_screen.dart';
 import '../../features/shopping_list/presentation/shopping_list_screen.dart';
 import '../../features/pantry/presentation/add_item_screen.dart';
 import '../../features/pantry/presentation/pantry_screen.dart';
@@ -90,6 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/shopping-list',
         builder: (c, s) => const ShoppingListScreen(),
+      ),
+      GoRoute(
+        path: '/meal-plan/recipe',
+        builder: (c, s) =>
+            MealRecipeDetailScreen(recipe: s.extra as MealRecipe),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => _ShellScreen(shell),

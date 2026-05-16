@@ -1,8 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/providers/meal_plan_provider.dart';
+import '../../../shared/providers/pantry_provider.dart';
+import '../../../shared/providers/profile_provider.dart';
 import '../../../shared/widgets/frigo_header.dart';
 import '../domain/weekly_plan.dart';
 import 'week_planner_sheet.dart';
@@ -104,7 +108,7 @@ class _PlanBody extends StatelessWidget {
       itemBuilder: (_, i) {
         final day = plan.days[i];
         final isToday = day.day == todayName;
-        return _DayCard(day: day, isToday: isToday);
+        return _DayCard(day: day, isToday: isToday, dayIndex: i);
       },
     );
   }
@@ -112,11 +116,89 @@ class _PlanBody extends StatelessWidget {
 
 // ─── Day card ─────────────────────────────────────────────────────────────────
 
-class _DayCard extends StatelessWidget {
+class _DayCard extends ConsumerStatefulWidget {
   final MealDay day;
   final bool isToday;
+  final int dayIndex;
 
-  const _DayCard({required this.day, required this.isToday});
+  const _DayCard({
+    required this.day,
+    required this.isToday,
+    required this.dayIndex,
+  });
+
+  @override
+  ConsumerState<_DayCard> createState() => _DayCardState();
+}
+
+class _DayCardState extends ConsumerState<_DayCard> {
+  bool _regenerating = false;
+
+  MealDay get day => widget.day;
+  bool get isToday => widget.isToday;
+
+  Future<void> _confirmRegenerate() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Înlocuiește rețeta'),
+        content: Text(
+          'Înlocuiești rețeta de ${day.day}? AI-ul va sugera o alternativă.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Anulează'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Înlocuiește',
+              style: TextStyle(color: AppColors.darkEmerald),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _regenerating = true);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final pantry = ref.read(pantryProvider).valueOrNull ?? [];
+      final profile = ref.read(profileProvider).valueOrNull;
+
+      await regenerateSingleMeal(
+        uid: uid,
+        weekId: currentWeekId(),
+        dayIndex: widget.dayIndex,
+        pantryItems: pantry,
+        profile: profile,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Rețetă înlocuită!'),
+            backgroundColor: AppColors.darkEmerald,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Eroare la regenerare: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _regenerating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,66 +220,98 @@ class _DayCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
-        child: Column(
+        child: Stack(
           children: [
-            // day header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isToday
-                    ? AppColors.primary.withValues(alpha: 0.08)
-                    : AppColors.background,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: isToday ? AppColors.primary : AppColors.textMuted,
+            Column(
+              children: [
+                // day header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 6, 4),
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : AppColors.background,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    day.day,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: isToday ? AppColors.primary : AppColors.text,
-                    ),
-                  ),
-                  if (isToday) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color:
+                            isToday ? AppColors.primary : AppColors.textMuted,
                       ),
-                      child: const Text(
-                        'AZI',
+                      const SizedBox(width: 8),
+                      Text(
+                        day.day,
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color:
+                              isToday ? AppColors.primary : AppColors.text,
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                      if (isToday) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'AZI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      _regenerating
+                          ? const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.refresh_outlined,
+                                  size: 20),
+                              color: AppColors.textMuted,
+                              tooltip: 'Înlocuiește rețeta',
+                              onPressed: _confirmRegenerate,
+                            ),
+                    ],
+                  ),
+                ),
+                // meals
+                ...day.meals.asMap().entries.map((e) {
+                  final index = e.key;
+                  final meal = e.value;
+                  return _MealTile(
+                    meal: meal,
+                    mealIndex: index,
+                    mealsCount: day.meals.length,
+                  );
+                }),
+              ],
             ),
-            // meals
-            ...day.meals.asMap().entries.map((e) {
-              final index = e.key;
-              final meal = e.value;
-              return _MealTile(
-                meal: meal,
-                mealIndex: index,
-                mealsCount: day.meals.length,
-              );
-            }),
+            if (_regenerating)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: AppColors.surface.withValues(alpha: 0.55),
+                ),
+              ),
           ],
         ),
       ),
@@ -205,7 +319,7 @@ class _DayCard extends StatelessWidget {
   }
 }
 
-// ─── Meal tile (expandable) ───────────────────────────────────────────────────
+// ─── Meal tile (tappable → detail) ────────────────────────────────────────────
 
 class _MealTile extends StatelessWidget {
   final MealRecipe meal;
@@ -227,16 +341,16 @@ class _MealTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasDetails = meal.ingredientsAvailable.isNotEmpty ||
-        meal.ingredientsMissing.isNotEmpty;
+    final missing = meal.ingredientsMissing;
 
-    if (!hasDetails) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    return InkWell(
+      onTap: () => context.push('/meal-plan/recipe', extra: meal),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             const Text('🍽️', style: TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,108 +370,26 @@ class _MealTile extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
+                  if (missing.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '🛒 Lipsă: ${missing.join(', ')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.useSoonYellow,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+            const Icon(Icons.chevron_right,
+                color: AppColors.textMuted, size: 20),
           ],
         ),
-      );
-    }
-
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        childrenPadding:
-            const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        leading: const Text('🍽️', style: TextStyle(fontSize: 18)),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _mealLabel,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              meal.name,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-        children: [
-          if (meal.ingredientsAvailable.isNotEmpty) ...[
-            _IngredientSection(
-              label: 'Disponibile în frigider',
-              items: meal.ingredientsAvailable,
-              color: AppColors.freshGreen,
-              icon: Icons.check_circle_outline,
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (meal.ingredientsMissing.isNotEmpty)
-            _IngredientSection(
-              label: 'De cumpărat',
-              items: meal.ingredientsMissing,
-              color: AppColors.useSoonYellow,
-              icon: Icons.shopping_cart_outlined,
-            ),
-        ],
       ),
-    );
-  }
-}
-
-class _IngredientSection extends StatelessWidget {
-  final String label;
-  final List<String> items;
-  final Color color;
-  final IconData icon;
-
-  const _IngredientSection({
-    required this.label,
-    required this.items,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: color,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ...items.map(
-          (ing) => Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 2),
-            child: Text(
-              '• $ing',
-              style: const TextStyle(fontSize: 13, color: AppColors.text),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

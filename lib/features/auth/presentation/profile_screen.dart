@@ -18,25 +18,6 @@ const _roMonths = [
   'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
 ];
 
-const _dietOptions = [
-  ('omnivor', 'Omnivor'),
-  ('vegetarian', 'Vegetarian'),
-  ('vegan', 'Vegan'),
-  ('fara_gluten', 'Fără gluten'),
-  ('paleo', 'Paleo'),
-];
-
-const _allergyOptions = [
-  ('lactate', 'Lactate'),
-  ('gluten', 'Gluten'),
-  ('nuci', 'Nuci'),
-  ('oua', 'Ouă'),
-  ('soia', 'Soia'),
-  ('peste', 'Pește'),
-];
-
-const _darkTeal = Color(0xFF073B3A);
-
 // ─── Local edit state ─────────────────────────────────────────────────────────
 
 class _EditNotifier extends StateNotifier<UserProfile?> {
@@ -57,18 +38,6 @@ class _EditNotifier extends StateNotifier<UserProfile?> {
   Future<void> setHouseholdSize(int v) async {
     state = state?.copyWith(householdSize: v);
     await _write({'householdSize': v});
-  }
-
-  Future<void> setDietType(String v) async {
-    state = state?.copyWith(dietType: v);
-    await _write({'dietType': v});
-  }
-
-  Future<void> toggleAllergy(String id) async {
-    final list = List<String>.from(state?.allergies ?? []);
-    list.contains(id) ? list.remove(id) : list.add(id);
-    state = state?.copyWith(allergies: list);
-    await _write({'allergies': list});
   }
 
   Future<void> toggleNotification(String key, bool val) async {
@@ -200,10 +169,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   profile: profile,
                   onSizeChanged: (v) =>
                       ref.read(_editProvider.notifier).setHouseholdSize(v),
-                  onDietChanged: (v) =>
-                      ref.read(_editProvider.notifier).setDietType(v),
-                  onAllergyToggled: (v) =>
-                      ref.read(_editProvider.notifier).toggleAllergy(v),
                 ),
                 const SizedBox(height: 16),
                 _CondimentsCard(
@@ -389,14 +354,10 @@ class _ImpactStat extends StatelessWidget {
 class _HouseholdCard extends StatelessWidget {
   final UserProfile profile;
   final void Function(int) onSizeChanged;
-  final void Function(String) onDietChanged;
-  final void Function(String) onAllergyToggled;
 
   const _HouseholdCard({
     required this.profile,
     required this.onSizeChanged,
-    required this.onDietChanged,
-    required this.onAllergyToggled,
   });
 
   @override
@@ -404,54 +365,17 @@ class _HouseholdCard extends StatelessWidget {
     final theme = Theme.of(context);
     return _SectionCard(
       title: 'Gospodărie',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text('Persoane în casă',
-                    style: theme.textTheme.bodyMedium),
-              ),
-              _Stepper(
-                value: profile.householdSize,
-                min: 1,
-                max: 8,
-                onChanged: onSizeChanged,
-              ),
-            ],
+          Expanded(
+            child:
+                Text('Persoane în casă', style: theme.textTheme.bodyMedium),
           ),
-          const Divider(height: 28),
-          Text('Tip dietă', style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            value: profile.dietType,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            items: _dietOptions
-                .map((opt) =>
-                    DropdownMenuItem(value: opt.$1, child: Text(opt.$2)))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) onDietChanged(v);
-            },
-          ),
-          const Divider(height: 28),
-          Text('Alergii & restricții', style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _allergyOptions
-                .map((opt) => _AllergyChip(
-                      label: opt.$2,
-                      selected: profile.allergies.contains(opt.$1),
-                      onTap: () => onAllergyToggled(opt.$1),
-                    ))
-                .toList(),
+          _Stepper(
+            value: profile.householdSize,
+            min: 1,
+            max: 8,
+            onChanged: onSizeChanged,
           ),
         ],
       ),
@@ -535,46 +459,6 @@ class _StepBtn extends StatelessWidget {
           icon,
           size: 18,
           color: enabled ? AppColors.primary : AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
-class _AllergyChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _AllergyChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          // rgba(7, 59, 58, 0.08) → 0x14 alpha
-          color: selected ? const Color(0x14073B3A) : Colors.transparent,
-          border: Border.all(
-            color: selected ? _darkTeal : AppColors.divider,
-            width: selected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: selected ? _darkTeal : AppColors.textSecondary,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.w400,
-              ),
         ),
       ),
     );

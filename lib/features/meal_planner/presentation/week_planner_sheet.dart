@@ -15,6 +15,15 @@ import '../../../shared/providers/profile_provider.dart';
 import '../data/groq_service.dart';
 import '../data/preferences_extractor.dart';
 
+String _stripFences(String raw) {
+  var s = raw.trim();
+  if (s.startsWith('```')) {
+    s = s.replaceFirst(RegExp(r'^```[a-zA-Z]*\n?'), '');
+    if (s.endsWith('```')) s = s.substring(0, s.length - 3);
+  }
+  return s.trim();
+}
+
 /// Respinge textul explicativ scăpat neparsat din răspunsul AI, ca să nu
 /// ajungă în lista de cumpărături (ex: "avocado sau alte ingrediente,
 /// dacă doriți...").
@@ -102,15 +111,33 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
         profile: profile,
         prefs: prefs,
       );
-      final parsed = jsonDecode(raw.trim()) as Map<String, dynamic>;
-      if (parsed['plan'] == null) throw Exception('Missing plan key');
+      // DEBUG TEMP — remove after diagnosis
+      debugPrint('[weekSheet] pantryItems=${pantryItems.length} '
+          'rawLen=${raw.length}');
+      Map<String, dynamic> parsed;
+      try {
+        parsed = jsonDecode(_stripFences(raw)) as Map<String, dynamic>;
+      } catch (e) {
+        // DEBUG TEMP — remove after diagnosis
+        final snippet = raw.length > 400 ? raw.substring(0, 400) : raw;
+        debugPrint('[weekSheet] jsonDecode failed: $e | rawHead=$snippet');
+        rethrow;
+      }
+      if (parsed['plan'] == null) {
+        // DEBUG TEMP — remove after diagnosis
+        debugPrint('[weekSheet] missing plan key. keys=${parsed.keys.toList()}');
+        throw Exception('Missing plan key');
+      }
       await _savePlanToFirestore(parsed['plan'] as List);
       setState(() {
         _plan = parsed;
         _planSaved = true;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      // DEBUG TEMP — remove after diagnosis
+      debugPrint('[weekSheet] generate failed: $e');
+      debugPrint('[weekSheet] stack: $st');
       setState(() {
         _error = 'Eroare la generare. Încearcă din nou.';
         _isLoading = false;

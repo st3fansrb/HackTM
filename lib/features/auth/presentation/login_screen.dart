@@ -168,7 +168,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 48),
-                    _buildLogo(),
                     const SizedBox(height: 40),
                     _buildCard(context, state, theme),
                     const SizedBox(height: 20),
@@ -263,14 +262,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildLogo() {
-    return Image.asset(
-      'assets/images/logo+name.png',
-      width: 180,
-      fit: BoxFit.contain,
     );
   }
 

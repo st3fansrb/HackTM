@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../../../features/auth/domain/user_preferences.dart';
@@ -404,7 +405,21 @@ class GroqService {
       },
     ];
 
-    return _callApi(messages, maxTokens: 2000);
+    // DEBUG TEMP — remove after diagnosis
+    debugPrint('[weeklyPlan] filtered recipes=${filtered.length} '
+        'systemLen=${systemWithContext.length} '
+        'days=$days mealsPerDay=$mealsPerDay '
+        'apiKeyLen=${_apiKey.length}');
+
+    final raw = await _callApi(messages, maxTokens: 2000);
+
+    // DEBUG TEMP — remove after diagnosis
+    final preview = raw.length > 200 ? raw.substring(0, 200) : raw;
+    final tail = raw.length > 200 ? raw.substring(raw.length - 200) : '';
+    debugPrint('[weeklyPlan] rawLen=${raw.length} head=$preview');
+    if (tail.isNotEmpty) debugPrint('[weeklyPlan] tail=$tail');
+
+    return raw;
   }
 
   Future<String> regenerateSingleMeal(
@@ -493,6 +508,13 @@ class GroqService {
       }),
     );
 
+    if (response.statusCode != 200) {
+      // DEBUG TEMP — remove after diagnosis
+      final bodySnippet = response.body.length > 400
+          ? response.body.substring(0, 400)
+          : response.body;
+      debugPrint('[groq] HTTP ${response.statusCode} body=$bodySnippet');
+    }
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw Exception('Cheia API Groq nu este validă sau a expirat.');
     } else if (response.statusCode == 429) {

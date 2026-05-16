@@ -117,7 +117,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen>
       titleWidget = Text(
         '${selectedIds.length} selectate',
         style: const TextStyle(
-            fontWeight: FontWeight.w700, fontSize: 18, color: Colors.white),
+            fontWeight: FontWeight.w700, fontSize: 22, color: Colors.white),
       );
     } else if (currentTab == 0) {
       titleWidget = Column(
@@ -127,19 +127,19 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen>
           const Text('🍽️ Rețete',
               style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 18,
+                  fontSize: 22,
                   color: Colors.white)),
           Text(subtitleText,
               style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   color: Colors.white70,
-                  fontWeight: FontWeight.w400)),
+                  fontWeight: FontWeight.w500)),
         ],
       );
     } else {
       titleWidget = const Text('📅 Planul săptămânii',
           style: TextStyle(
-              fontWeight: FontWeight.w700, fontSize: 18, color: Colors.white));
+              fontWeight: FontWeight.w700, fontSize: 22, color: Colors.white));
     }
 
     final List<Widget> appBarActions;

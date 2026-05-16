@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +14,35 @@ import '../../../shared/providers/pantry_provider.dart';
 import '../../../shared/providers/profile_provider.dart';
 import '../data/groq_service.dart';
 import '../data/preferences_extractor.dart';
+
+/// Respinge textul explicativ scăpat neparsat din răspunsul AI, ca să nu
+/// ajungă în lista de cumpărături (ex: "avocado sau alte ingrediente,
+/// dacă doriți...").
+bool isMeaningfulIngredient(String raw) {
+  final s = raw.trim();
+  if (s.isEmpty || s.length > 50) return false;
+
+  final lower = s.toLowerCase();
+  const banned = [
+    'dacă doriți', 'daca doriti', 'dacă doresti', 'daca doresti',
+    'dacă vreți', 'daca vreti', 'puteți', 'puteti', 'pentru a ',
+    'arome', 'aromă', 'aroma', 'texturi', 'textură', 'textura',
+    'opțional', 'optional', 'sau alte', 'după gust', 'dupa gust', 'etc',
+  ];
+  for (final b in banned) {
+    if (lower.contains(b)) return false;
+  }
+
+  // virgulă urmată de spațiu și conjuncție = frază, nu ingredient
+  if (RegExp(r',\s+(dacă|daca|sau|și|si)\b').hasMatch(lower)) return false;
+
+  // frază descriptivă lungă care nu începe cu o cantitate
+  final startsWithDigit = RegExp(r'^\d').hasMatch(s);
+  final wordCount = s.split(RegExp(r'\s+')).length;
+  if (!startsWithDigit && wordCount > 6) return false;
+
+  return true;
+}
 
 class WeekPlannerSheet extends ConsumerStatefulWidget {
   const WeekPlannerSheet({super.key});
@@ -116,85 +144,32 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
     if (user == null) return;
     setState(() => _addingToList = true);
 
-    // Încarcă baza de rețete pentru gramaje
-    final Map<String, Map<String, dynamic>?> recipeQuantities = {};
-    try {
-      final raw =
-          await rootBundle.loadString('assets/data/recipes_database.json');
-      final db = jsonDecode(raw) as Map<String, dynamic>;
-      for (final category in db.values) {
-        if (category is List) {
-          for (final recipe in category.cast<Map<String, dynamic>>()) {
-            final name = (recipe['name'] as String? ?? '').toLowerCase();
-            recipeQuantities[name] =
-                recipe['quantity_per_serving'] as Map<String, dynamic>?;
-          }
-        }
-      }
-    } catch (_) {}
-
     final repo = ShoppingListRepository();
     final days = (_plan!['plan'] as List).cast<Map<String, dynamic>>();
-    // ingredient → (quantity, unit)
-    final Map<String, (double?, String?)> missingMap = {};
+    final seen = <String>{};
+    final toAdd = <String>[];
 
     for (final day in days) {
       for (final meal
           in (day['meals'] as List).cast<Map<String, dynamic>>()) {
-        final mealName = (meal['name'] as String? ?? '').toLowerCase();
         final missing = meal['ingredients_missing'];
         if (missing is! List) continue;
-
-        // caută gramajele pentru rețeta curentă
-        Map<String, dynamic>? qtyMap;
-        try {
-          if (recipeQuantities.containsKey(mealName)) {
-            qtyMap = recipeQuantities[mealName];
-          } else {
-            for (final entry in recipeQuantities.entries) {
-              if (entry.key.contains(mealName) ||
-                  mealName.contains(entry.key)) {
-                qtyMap = entry.value;
-                break;
-              }
-            }
-          }
-        } catch (_) {}
-
         for (final ing in missing.cast<String>()) {
           final name = ing.trim();
-          if (missingMap.containsKey(name)) continue;
-
-          double? qty;
-          String? unit;
-          if (qtyMap != null) {
-            try {
-              final ingLower = name.toLowerCase();
-              for (final qEntry in qtyMap.entries) {
-                if (qEntry.key.toLowerCase().contains(ingLower) ||
-                    ingLower.contains(qEntry.key.toLowerCase())) {
-                  final parsed = _parseQuantity(qEntry.value.toString());
-                  qty = parsed.$1;
-                  unit = parsed.$2;
-                  break;
-                }
-              }
-            } catch (_) {}
-          }
-          missingMap[name] = (qty, unit);
+          if (!isMeaningfulIngredient(name)) continue;
+          if (!seen.add(name.toLowerCase())) continue;
+          toAdd.add(name);
         }
       }
     }
 
-    for (final entry in missingMap.entries) {
+    for (final name in toAdd) {
       try {
         await repo.addItem(
           user.uid,
           ShoppingItem(
             id: '',
-            name: entry.key,
-            quantity: entry.value.$1,
-            unit: entry.value.$2,
+            name: name,
             checked: false,
             source: 'meal_plan',
             addedAt: DateTime.now(),
@@ -207,16 +182,6 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
       setState(() => _addingToList = false);
       Navigator.of(context).pop();
     }
-  }
-
-  (double?, String?) _parseQuantity(String raw) {
-    final match =
-        RegExp(r'^(\d+(?:\.\d+)?)\s*(.*)$').firstMatch(raw.trim());
-    if (match == null) return (null, null);
-    final qty = double.tryParse(match.group(1)!);
-    var unitStr = match.group(2)?.trim() ?? '';
-    if (unitStr == 'bucăți' || unitStr == 'bucată') unitStr = 'buc';
-    return (qty, unitStr.isEmpty ? null : unitStr);
   }
 
   @override
@@ -240,6 +205,8 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
   }
 
   Widget _buildSuccess() {
+    final missingCount = _countMissingIngredients();
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
         32,
@@ -275,11 +242,45 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
+          if (missingCount > 0) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _addingToList ? null : _addMissingToList,
+                icon: _addingToList
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.shopping_cart_outlined),
+                label: Text(
+                  'Adaugă $missingCount ingrediente lipsă în coș',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkEmerald,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Expanded(
                 child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _addingToList
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text(
                     'Închide',
                     style: TextStyle(
@@ -292,7 +293,7 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
-                child: ElevatedButton.icon(
+                child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_month),
                   label: const Text(
                     'Vezi planul',
@@ -301,19 +302,23 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
                       fontSize: 15,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.darkEmerald,
-                    foregroundColor: Colors.white,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.darkEmerald,
+                    side: const BorderSide(
+                        color: AppColors.darkEmerald, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {
-                    ref.read(selectedRecipesTabProvider.notifier).state = 1;
-                    Navigator.of(context).pop();
-                    context.go('/recipes');
-                  },
+                  onPressed: _addingToList
+                      ? null
+                      : () {
+                          ref.read(selectedRecipesTabProvider.notifier).state =
+                              1;
+                          Navigator.of(context).pop();
+                          context.go('/recipes');
+                        },
                 ),
               ),
             ],
@@ -321,6 +326,25 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
         ],
       ),
     );
+  }
+
+  int _countMissingIngredients() {
+    if (_plan == null) return 0;
+    final days = (_plan!['plan'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final seen = <String>{};
+    for (final day in days) {
+      final meals = (day['meals'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      for (final meal in meals) {
+        final missing = meal['ingredients_missing'];
+        if (missing is! List) continue;
+        for (final ing in missing.cast<String>()) {
+          final name = ing.trim();
+          if (!isMeaningfulIngredient(name)) continue;
+          seen.add(name.toLowerCase());
+        }
+      }
+    }
+    return seen.length;
   }
 
   Widget _buildForm() {
@@ -451,7 +475,9 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
       for (final meal
           in (day['meals'] as List).cast<Map<String, dynamic>>()) {
         final m = meal['ingredients_missing'];
-        if (m is List) allMissing.addAll(m.cast<String>());
+        if (m is List) {
+          allMissing.addAll(m.cast<String>().where(isMeaningfulIngredient));
+        }
       }
     }
 
@@ -507,7 +533,9 @@ class _WeekPlannerSheetState extends ConsumerState<WeekPlannerSheet> {
                               [];
                       final missing =
                           (meal['ingredients_missing'] as List?)
-                                  ?.cast<String>() ??
+                                  ?.cast<String>()
+                                  .where(isMeaningfulIngredient)
+                                  .toList() ??
                               [];
                       return Padding(
                         padding: const EdgeInsets.only(

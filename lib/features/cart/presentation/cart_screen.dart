@@ -582,6 +582,7 @@ class _ShoppingListSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(shoppingListProvider);
+    final hasItems = itemsAsync.valueOrNull?.isNotEmpty ?? false;
     final maxH = MediaQuery.of(context).size.height * 0.82;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
@@ -619,6 +620,13 @@ class _ShoppingListSheet extends ConsumerWidget {
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
+                if (hasItems)
+                  IconButton(
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 20),
+                    color: AppColors.textMuted,
+                    tooltip: 'Golește lista',
+                    onPressed: () => _confirmClear(context, ref),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   color: AppColors.textMuted,
@@ -701,6 +709,49 @@ class _ShoppingListSheet extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _confirmClear(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Golește lista'),
+        content: const Text('Golești toată lista de cumpărături?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.expiredRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Golește',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await ref.read(shoppingListRepositoryProvider).clearAll(user.uid);
+    } catch (_) {}
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Lista a fost golită'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.darkEmerald,
       ),
     );
   }

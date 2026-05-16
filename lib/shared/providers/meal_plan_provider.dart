@@ -95,14 +95,16 @@ Future<void> regenerateSingleMeal({
   final available = <String>[];
   final missing = <String>[];
   for (final ing in ingredients) {
-    final ingName = (ing['name'] as String? ?? '').trim();
+    final mi = MealIngredient.fromJson(ing);
+    final ingName = mi.name.trim();
     if (ingName.isEmpty) continue;
+    final label = mi.display;
     final inPantry = pantryItems.any((p) => _matches(p.name, ingName));
     final isOwned = owned.any((c) => _matches(c, ingName));
     if (inPantry || isOwned) {
-      available.add(ingName);
+      available.add(label);
     } else {
-      missing.add(ingName);
+      missing.add(label);
     }
   }
 

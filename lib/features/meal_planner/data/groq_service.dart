@@ -380,13 +380,15 @@ class GroqService {
         '- Condimentele de bază (ulei, sare, piper, oțet) NU se trec în ingredients_missing — se consideră că utilizatorul le are mereu.\n'
         '- Masa de prânz trebuie să fie consistentă (fel principal cu proteină sau supă/ciorbă completă). Masa de seară poate fi mai ușoară dar trebuie să fie o masă reală, nu o gustare.\n'
         '- Nu repeta aceeași rețetă în două zile diferite ale săptămânii. Fiecare zi trebuie să aibă rețete unice față de celelalte zile.\n'
+        '- Fiecare element din ingredients_missing și ingredients_available TREBUIE să includă cantitatea și unitatea de măsură. Format obligatoriu: "{cantitate} {unitate} {nume}". Exemple corecte: "200g făină", "1L lapte", "3 ouă", "500g piept de pui". NU include niciodată un ingredient fără cantitate.\n'
+        '- ingredients_missing și ingredients_available conțin DOAR numele ingredientului cu cantitate, câte un singur ingredient per element. NU include explicații, sugestii, alternative sau text descriptiv (ex: "sau alte ingrediente", "dacă doriți", "pentru aromă", "după gust"). Fiecare element = exact un ingredient.\n'
         "Pentru fiecare rețetă, câmpul 'instructions' este OBLIGATORIU și trebuie "
         'să conțină minim 3 pași detaliați de preparare, scrisi în română, '
         'separați prin newline. Nu lăsa instructions gol sau null niciodată.\n'
         'Răspunde DOAR cu JSON valid, fără text explicativ, fără markdown, fără backticks.\n'
         'Zilele planului: ${selectedDays.join(", ")}.\n'
         'Format exact:\n'
-        '{"plan":[{"day":"Luni","meals":[{"name":"Rețetă","ingredients_available":["ing1"],"ingredients_missing":["ing2"],"instructions":"1. Primul pas detaliat.\\n2. Al doilea pas detaliat.\\n3. Al treilea pas detaliat."}]}]}\n'
+        '{"plan":[{"day":"Luni","meals":[{"name":"Rețetă","ingredients_available":["200g ing1"],"ingredients_missing":["3 buc ing2"],"instructions":"1. Primul pas detaliat.\\n2. Al doilea pas detaliat.\\n3. Al treilea pas detaliat."}]}]}\n'
         'Fiecare zi trebuie să aibă exact $mealsPerDay mese.';
 
     final systemWithContext = '$prompt\n\n'

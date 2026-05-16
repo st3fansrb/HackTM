@@ -174,6 +174,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen>
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        toolbarHeight: 80,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
